@@ -1,5 +1,5 @@
 // 離線快取：先用快取顯示，背景更新；有新版時下次開啟生效
-const CACHE = "zooarch-analysis-v1.0.0";
+const CACHE = "zooarch-analysis-v1.0.1";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
