@@ -369,7 +369,8 @@ n/a,-
 
   // ---------------------------------------------------------------- 動物相
   /** col：計算的分類欄（預設物種）；groups：該欄的名稱合併與排序設定 */
-  function fauna(rows, groups, col = "物種") {
+  /** taxCols：另外列出的上層分類欄（例如 綱、目、科），只是說明欄位，不影響 NISP */
+  function fauna(rows, groups, col = "物種", taxCols = []) {
     const ord = spOrderMap(groups);
     let use;
     if (col === "物種") use = rows.filter((r) => r._spInclude).map((r) => [r._sp, r]);
@@ -385,6 +386,7 @@ n/a,-
       const rs = xs.map((x) => x[1]);
       const o = { 物種: sp, NISP: sum(rs, (r) => r._qty), 筆數: rs.length };
       if (hasW) o.重量 = sum(rs, wOf);
+      for (const c of taxCols) o["_tax_" + c] = taxOf(rs, c);
       return o;
     });
     t.sort((a, b) => (ord.get(a.物種) ?? 9999) - (ord.get(b.物種) ?? 9999) || b.NISP - a.NISP);
@@ -394,6 +396,13 @@ n/a,-
     const wTotal = hasW ? sum(t, (x) => x.重量) : null;
     if (hasW) t.forEach((x) => (x.重量百分比 = wTotal ? x.重量 / wTotal : 0));
     return { table: t, total, idTotal, hasW, wTotal };
+  }
+
+  /** 一群紀錄在某分類欄的值（依筆數多寡；不一致時以「／」相連） */
+  function taxOf(rs, c) {
+    const m = new Map();
+    for (const r of rs) { const v = String(r[c] ?? "").trim(); if (v && v !== "-") m.set(v, (m.get(v) || 0) + 1); }
+    return [...m].sort((a, b) => b[1] - a[1]).map((x) => x[0]).join("／");
   }
 
   // ---------------------------------------------------------------- MNI
@@ -984,7 +993,7 @@ n/a,-
   }
 
   return {
-    parseCSV, fromMatrix, FIELDS, TAXON_LEVELS, detectFields, applyFields, isKnownElement, lookupElement, toCSV, groupBy, sum, uniq, qtyOf, makeConfig, normalizeElement, elementInfo, normalizeSide, zonesOf,
+    parseCSV, fromMatrix, taxOf, FIELDS, TAXON_LEVELS, detectFields, applyFields, isKnownElement, lookupElement, toCSV, groupBy, sum, uniq, qtyOf, makeConfig, normalizeElement, elementInfo, normalizeSide, zonesOf,
     defaultSpeciesGroups, groupsFromCSV, groupsToCSV, resolveSpecies, prepare, fauna, mni, mniDefault, chromatic,
     elements, sex, age, marks, molars, describe, normPos, normMark, wearRank,
     LEMOINE, SYSTEMS, defaultWearScore, scoresOf, toothClasses, lemoineAssign, lemoineSummary,

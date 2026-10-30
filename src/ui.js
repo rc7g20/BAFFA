@@ -2,7 +2,7 @@
 // 介面
 // ============================================================================
 "use strict";
-const APP_VERSION = "1.0.0（2026-10-30）";
+const APP_VERSION = "1.1.0（2026-10-30）";
 const $ = (id) => document.getElementById(id);
 const escH = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function h(tag, attrs = {}, ...kids) {
@@ -94,7 +94,13 @@ const sitePath = (p) => [S.site, p].filter(Boolean).join("/");
 const resultsPath = (p) => sitePath("分析結果/" + p);
 const ui = (tab) => (S.settings.ui[tab] ||= {});
 
-function markDirty() { S.dirty = true; $("saveBtn").classList.add("dirty"); $("saveStatus").textContent = "設定已變更，尚未儲存"; }
+function markDirty() { S.dirty = true; $("saveBtn").classList.add("dirty"); $("sideSave").classList.add("dirty"); $("saveStatus").textContent = "設定已變更，尚未儲存"; }
+// 資料篩選欄可收合（記在這台裝置）
+const setSide = (collapsed) => { document.querySelector(".layout").classList.toggle("collapsed", collapsed); try { localStorage.setItem("za:sideCollapsed", collapsed ? "1" : ""); } catch (e) { /* 忽略 */ } };
+$("sideClose").onclick = () => setSide(true);
+$("sideOpen").onclick = () => setSide(false);
+$("sideSave").onclick = () => $("saveBtn").click();
+try { if (localStorage.getItem("za:sideCollapsed")) setSide(true); } catch (e) { /* 忽略 */ }
 window.addEventListener("beforeunload", (e) => { if (S.dirty) { e.preventDefault(); e.returnValue = ""; } });
 
 // ---------------------------------------------------------------- 瀏覽器內保存（唯讀／平板模式）
@@ -359,7 +365,7 @@ async function loadSite(site, csvName, sheet = null) {
   $("loadStatus").innerHTML = msgs.join("　·　");
   renderLoadTools();
   $("app").style.display = "block";
-  $("saveBtn").classList.remove("dirty"); $("saveStatus").textContent = S.fs.writable ? "" : "唯讀模式：設定會存在這台裝置的瀏覽器中（可另外下載備份）";
+  $("saveBtn").classList.remove("dirty"); $("sideSave").classList.remove("dirty"); $("saveStatus").textContent = S.fs.writable ? "" : "唯讀模式：設定會存在這台裝置的瀏覽器中（可另外下載備份）";
   buildFilters(); buildTabs(); renderTab();
 }
 function renderLoadTools() {
@@ -383,6 +389,9 @@ function applyFilters() {
   S.view = S.rows.filter((r) => S.settings.filterCols.every((c) => !(f[c] || []).includes(r[c] ?? "")));
   const st = $("filterStatus");
   if (st) st.innerHTML = S.view.length === S.rows.length ? `使用全部 <b>${S.rows.length}</b> 筆` : `使用 <b>${S.view.length}</b> / ${S.rows.length} 筆`;
+  const nf = S.settings.filterCols.filter((c) => (f[c] || []).length).length;
+  $("sideInfo").innerHTML = "篩<br>選" + (nf ? `<br><b title="${nf} 個篩選條件">${nf}</b>` : "");
+  $("sideOpen").title = S.view.length === S.rows.length ? "展開資料篩選" : `展開資料篩選（目前使用 ${S.view.length}／${S.rows.length} 筆）`;
 }
 function buildFilters() {
   const box = $("filters"); box.innerHTML = "";
@@ -429,13 +438,13 @@ $("saveBtn").onclick = async () => {
   if (!S.fs.writable) {
     // 平板／唯讀：設定存在這台裝置的瀏覽器裡，下次選同一個檔案會自動套用；同時提供下載備份
     const ok = LS.set(LS.key(), { settings: S.settings, groupsCSV: Core.groupsToCSV(S.groups), fieldMap: S.fieldMap, savedAt: Date.now() });
-    S.dirty = false; $("saveBtn").classList.remove("dirty");
+    S.dirty = false; $("saveBtn").classList.remove("dirty"); $("sideSave").classList.remove("dirty");
     $("saveStatus").innerHTML = ok ? `已存在這台裝置的瀏覽器中（${new Date().toLocaleTimeString()}）。` : "瀏覽器不允許儲存（可能是私密瀏覽）。";
     $("saveStatus").append(h("button", { class: "mini", style: { marginTop: "4px" }, onclick: async () => { for (const [name, text] of out) await saveFile(name, text, name); } }, "下載設定檔備份"));
     return;
   }
   for (const [name, text] of out) msgs.push(await saveFile(name, text, name));
-  S.dirty = false; $("saveBtn").classList.remove("dirty");
+  S.dirty = false; $("saveBtn").classList.remove("dirty"); $("sideSave").classList.remove("dirty");
   $("saveStatus").textContent = S.fs.writable ? `已儲存（${new Date().toLocaleTimeString()}）：物種對照表、MNI部位設定、表面痕歸類、磨耗對照、網頁工具設定` : "已下載 5 個設定檔，請放到遺址的「分析結果」資料夾";
 };
 
@@ -652,7 +661,9 @@ function openExport(spec, st, key) {
 
 // ---------------------------------------------------------------- 共用元件
 function speciesOptions() {
-  return [...S.groups].filter((g) => g.include && !Core.NON_TAXON.test(g.name)).sort((a, b) => a.order - b.order).map((g) => g.name);
+  // 只列出目前篩選條件下有資料的物種
+  const present = new Set(S.view.map((r) => r._sp));
+  return [...S.groups].filter((g) => g.include && !Core.NON_TAXON.test(g.name) && present.has(g.name)).sort((a, b) => a.order - b.order).map((g) => g.name);
 }
 function speciesSelect(tab, def) {
   const u = ui(tab); const opts = speciesOptions();
@@ -708,7 +719,9 @@ RENDER.fauna = (body) => {
     G = S.settings.levelGroups[lvl] = Core.defaultSpeciesGroups(S.rows, S.settings.levelGroups[lvl] || null, lvl).groups;
   }
   const setG = (ng) => { if (lvl === "物種") S.groups = ng; else S.settings.levelGroups[lvl] = ng; };
-  const res = Core.fauna(rowsF, G, lvl);
+  const higher = Core.TAXON_LEVELS.slice(0, Core.TAXON_LEVELS.indexOf(lvl)).filter((c) => S.rows.some((r) => r[c]));
+  u.taxCols = (u.taxCols || []).filter((c) => higher.includes(c));
+  const res = Core.fauna(rowsF, G, lvl, u.taxCols);
   const scopeTxt = u.scopeCol && u.scopeVal ? `（${u.scopeCol}＝${u.scopeVal}）` : "";
   const top = h("div", { class: "row" },
     h("span", { class: "ctl" }, "計算欄位 ", h("select", { onchange: (e) => { u.level = e.target.value; markDirty(); renderTab(); } }, levels.map((c) => h("option", { selected: c === lvl }, c)))),
@@ -716,7 +729,9 @@ RENDER.fauna = (body) => {
       [h("option", { value: "" }, "（全部）"), ...scopeCols.map((c) => h("option", { selected: c === u.scopeCol }, c))])),
     u.scopeCol ? h("select", { onchange: (e) => { u.scopeVal = e.target.value; markDirty(); renderTab(); } },
       [h("option", { value: "" }, "（請選擇）"), ...scopeVals.map(([v, n]) => h("option", { value: v, selected: v === u.scopeVal }, `${v || "（空白）"}（${n}）`))]) : null,
-    h("span", { class: "muted" }, levels.length > 1 ? "例如：計算欄位＝物種、範圍＝綱：鳥綱，只看鳥類各物種；或計算欄位＝科。" : "清單中沒有綱／目／科／屬欄位，只能以物種計算。"));
+    higher.length ? h("span", { class: "ctl" }, "表格加列 ", higher.map((c) => h("label", {}, h("input", { type: "checkbox", checked: u.taxCols.includes(c), onchange: (e) => {
+      u.taxCols = higher.filter((x) => (x === c ? e.target.checked : u.taxCols.includes(x))); markDirty(); renderTab(); } }), " " + c))) : null,
+    h("span", { class: "muted" }, levels.length > 1 ? "例如：計算欄位＝物種、範圍＝綱：鳥綱，只看鳥類各物種；或計算欄位＝科。「表格加列」只是說明欄，不會重複計算件數。" : "清單中沒有綱／目／科／屬欄位，只能以物種計算。"));
 
   // --- 名稱設定清單（合併、排序、納入）
   const groups = [...G].sort((a, b) => a.order - b.order);
@@ -736,9 +751,11 @@ RENDER.fauna = (body) => {
     renumber([...G].sort((a, b) => a.order - b.order)); changed();
   } }, h("option", { value: "" }, x ? "▾" : "併入…"), x && g.raws.length > 1 ? h("option", { value: "__new" }, "拆成獨立名稱") : null,
   groups.filter((y) => y !== g).map((y) => h("option", { value: y.name }, "併入 " + y.name)));
-  // 範圍限定時，只列出範圍內出現的名稱
+  // 只列出目前篩選與範圍下有資料的名稱（可切換顯示全部）
   const inScope = new Set(rowsF.map((r) => (lvl === "物種" ? r._sp : r[lvl] ?? "")));
-  const shown = u.scopeVal ? groups.filter((g) => inScope.has(g.name) || g.raws.some((x) => inScope.has(x.raw))) : groups;
+  const present = groups.filter((g) => inScope.has(g.name) || g.raws.some((x) => inScope.has(x.raw)));
+  const shown = u.showAllNames ? groups : present;
+  const hiddenN = groups.length - present.length;
   const list = h("div", { class: "sp-list" }, shown.map((g) => {
     const item = h("div", { class: "sp-item" + (g.include ? "" : " excl"), draggable: "true",
       ondragstart: (e) => { dragName = g.name; e.dataTransfer.effectAllowed = "move"; },
@@ -771,13 +788,23 @@ RENDER.fauna = (body) => {
       renumber([...G].sort((a, b) => cat(a.name) - cat(b.name) || (allNisp.get(b.name) || 0) - (allNisp.get(a.name) || 0))); changed();
     } }, "依 NISP 排序"),
     h("button", { class: "mini", onclick: () => { if (!confirm(`「${lvl}」的合併、順序、納入設定都會回到自動預設（大小寫合併）。確定？`)) return; setG(Core.defaultSpeciesGroups(S.rows, null, lvl).groups); changed(); } }, "重設為預設"));
+  // 依分類排序：綱 → 目 → 科 → 屬 → NISP
+  if (higher.length) tools.append(h("button", { class: "mini", title: `依 ${higher.join("、")} 排序，同一類內依 NISP`, onclick: () => {
+    const byKey = Core.groupBy(S.rows, (r) => (lvl === "物種" ? r._sp : r[lvl] ?? ""));
+    const key = (g) => higher.map((c) => { const v = Core.taxOf(byKey.get(g.name) || [], c).split("／")[0]; return !v || Core.NON_TAXON.test(v) ? "\uffff" : v; });
+    const nt = (n) => (Core.NON_TAXON.test(n) ? 1 : 0);
+    renumber([...G].sort((a, b) => nt(a.name) - nt(b.name) || key(a).join("\u0001").localeCompare(key(b).join("\u0001"), "zh-Hant") || (allNisp.get(b.name) || 0) - (allNisp.get(a.name) || 0)));
+    changed();
+  } }, "依分類排序"));
+  if (hiddenN) tools.append(h("label", { class: "small muted" }, h("input", { type: "checkbox", checked: !!u.showAllNames, onchange: (e) => { u.showAllNames = e.target.checked; markDirty(); renderTab(); } }),
+    ` 也顯示目前篩選下沒有資料的 ${hiddenN} 個名稱`));
   const left = card(`${lvl}設定`, h("div", { class: "muted" }, "勾選＝納入；拖曳 ≡ 調整順序；改名稱可合併（改成已有的名稱）；原始名稱旁的 ▾ 可併入其他名稱或拆出。" + (lvl === "物種" ? "物種的合併也會影響其他分頁。" : "")), tools, list);
 
   // --- 結果表
-  const cols = [{ k: "物種", label: lvl }, { k: "NISP", f: "int" }, { k: "百分比", f: "pct" }, { k: "可鑑定百分比", label: "百分比（僅可鑑定）", f: "pct" }];
+  const cols = [...u.taxCols.map((c) => ({ k: "_tax_" + c, label: c })), { k: "物種", label: lvl }, { k: "NISP", f: "int" }, { k: "百分比", f: "pct" }, { k: "可鑑定百分比", label: "百分比（僅可鑑定）", f: "pct" }];
   if (res.hasW) cols.push({ k: "重量", f: "num" }, { k: "重量百分比", f: "pct" });
   cols.push({ k: "筆數", label: "紀錄筆數", f: "int" });
-  const total = { 物種: "合計", NISP: res.total, 百分比: 1, 可鑑定百分比: 1, 筆數: Core.sum(res.table, (x) => x.筆數), 重量: res.wTotal, 重量百分比: res.hasW ? 1 : null };
+  const total = { [u.taxCols.length ? "_tax_" + u.taxCols[0] : "物種"]: "合計", NISP: res.total, 百分比: 1, 可鑑定百分比: 1, 筆數: Core.sum(res.table, (x) => x.筆數), 重量: res.wTotal, 重量百分比: res.hasW ? 1 : null };
   const tbl = makeTable(cols, res.table, { total, name: `${S.site}_動物相_${lvl}${u.scopeVal ? "_" + u.scopeVal : ""}`, title: `遺址${lvl}相${scopeTxt}（NISP = 數量加總${res.hasW ? "；重量 = 重量欄加總" : ""}）` });
   // --- 圖
   const valOpts = [["NISP", "NISP"], ["百分比", "百分比"], ["可鑑定百分比", "百分比（僅可鑑定）"]].concat(res.hasW ? [["重量", "重量"], ["重量百分比", "重量百分比"]] : []);

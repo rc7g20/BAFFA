@@ -42,8 +42,16 @@ input[type=text],input[type=number],select{font:inherit;font-size:13.5px;border:
 input[type=number]{width:80px}
 input[type=color]{width:34px;height:26px;padding:1px;border:1px solid var(--line2);border-radius:5px;background:#fff}
 label{cursor:pointer}
-.layout{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
-@media (max-width:900px){.layout{grid-template-columns:1fr}}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}
+.layout > section{min-width:0}
+aside .minibar{display:none}
+.layout.collapsed{grid-template-columns:46px minmax(0,1fr)}
+.layout.collapsed aside .full{display:none}
+.layout.collapsed aside .minibar{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 4px}
+.layout.collapsed aside .minibar button{padding:4px 8px}
+.vtext{font-size:13px;color:var(--muted);text-align:center;line-height:1.25}
+.vtext b{color:var(--accent)}
+@media (max-width:900px){.layout,.layout.collapsed{grid-template-columns:1fr}.layout.collapsed aside .minibar{flex-direction:row;justify-content:flex-start}.vtext br{display:none}}
 aside .card{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto}
 .filter{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 .filter .fhead{display:flex;justify-content:space-between;align-items:center;gap:6px}
@@ -54,7 +62,8 @@ aside .card{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto
 .tabs button{border-radius:8px 8px 0 0;border-bottom:none;background:#efe9df}
 .tabs button.on{background:var(--panel);border-color:var(--line2);font-weight:600;color:var(--accent)}
 .tab{display:none}.tab.on{display:block}
-.split{display:grid;grid-template-columns:minmax(330px,0.9fr) 1.1fr;gap:16px;align-items:start}
+.split{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:16px;align-items:start}
+.split > *{min-width:0}
 @media (max-width:1200px){.split{grid-template-columns:1fr}}
 .tablewrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
 table{border-collapse:collapse;width:100%;font-size:13px}
@@ -73,9 +82,10 @@ td.star{color:var(--accent);font-weight:700}
 .tbar{display:flex;gap:6px;justify-content:flex-end;margin:6px 0}
 .sp-list{border:1px solid var(--line);border-radius:8px;background:#fff;max-height:620px;overflow:auto}
 .sp-item .updown{display:flex;gap:2px}.sp-item .updown button{padding:0 5px;font-size:11px;line-height:18px}
-.sp-item{display:grid;grid-template-columns:18px 22px 1fr 50px 52px 74px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid #eee8de}
+.sp-item{display:grid;grid-template-columns:18px 22px minmax(110px,1fr) auto auto auto;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid #eee8de}
 .sp-item .muted{text-align:right;font-variant-numeric:tabular-nums}
 .sp-item select.msel{font-size:12px;padding:2px;width:74px}
+.sp-item .muted{min-width:42px}
 .sp-item.drag-over{border-top:3px solid var(--accent)}
 .sp-item.excl{opacity:.5}
 .sp-item .handle{cursor:grab;color:#999;user-select:none;text-align:center}
@@ -148,8 +158,13 @@ dialog .f{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center
   <div id="app" style="display:none">
     <div class="layout">
       <aside>
-        <div class="card">
-          <h2>資料篩選</h2>
+        <div class="card minibar">
+          <button id="sideOpen" title="展開資料篩選">⟩</button>
+          <div class="vtext" id="sideInfo">篩<br>選</div>
+          <button id="sideSave" title="儲存設定">存</button>
+        </div>
+        <div class="card full">
+          <h2 style="display:flex;align-items:center">資料篩選<button id="sideClose" class="mini" style="margin-left:auto" title="收合，讓分析區域變寬">⟨ 收合</button></h2>
           <div class="status" id="filterStatus"></div>
           <div id="filters"></div>
           <div class="row" style="margin-top:10px">
