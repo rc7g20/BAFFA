@@ -1,0 +1,54 @@
+標準名稱,別名,骨骼區域,部位順序,側別MNI
+skull,頭骨;顱骨,顱部,1,N
+cranium,,顱部,2,N
+maxilla,上顎;上頜,顱部,3,Y
+premaxilla,,顱部,4,Y
+nasal,,顱部,5,N
+zygomatic,,顱部,6,N
+mandible,下顎;下頜,顱部,7,Y
+hyoid,,顱部,8,N
+tooth,牙齒,顱部,9,N
+antler,鹿角,顱部,10,N
+atlas,,軀幹,1,N
+axis,,軀幹,2,N
+cervical,cervical vertebra;頸椎,軀幹,3,N
+thoracic,thoracic vertebra;胸椎,軀幹,4,N
+lumbar,lumbar vertebra;腰椎,軀幹,5,N
+sacrum,薦椎;synsacrum,軀幹,6,N
+caudal,caudal vertebra;尾椎;尾骨,軀幹,7,N
+vertebrae,vertebra;脊椎,軀幹,8,N
+rib,肋骨,軀幹,9,N
+sternum,胸骨,軀幹,10,N
+pelvis,盆骨;骨盆;innominate;os coxae,軀幹,11,Y
+ilium,,軀幹,12,Y
+ischium,,軀幹,13,Y
+pubis,,軀幹,14,Y
+scapula,肩胛骨,近端多肉骨骼,1,Y
+humerus,肱骨,近端多肉骨骼,2,Y
+radius,橈骨,近端多肉骨骼,3,Y
+ulna,尺骨,近端多肉骨骼,4,Y
+radio-ulna,radioulna;radius+ulna;radius & ulna;radius and ulna,近端多肉骨骼,5,Y
+femur,股骨,近端多肉骨骼,6,Y
+patella,髕骨,近端多肉骨骼,7,Y
+tibia,脛骨,近端多肉骨骼,8,Y
+fibula,腓骨,近端多肉骨骼,9,Y
+tibio-fibula,tibiofibula,近端多肉骨骼,10,Y
+coracoid,,近端多肉骨骼,11,Y
+clavicle,,近端多肉骨骼,12,N
+wishbone,furcula,近端多肉骨骼,13,N
+tibiotarsus,,近端多肉骨骼,14,Y
+carpus,腕骨,遠端少肉骨骼,1,N
+tarsus,跗骨,遠端少肉骨骼,2,N
+calcaneus,跟骨,遠端少肉骨骼,3,Y
+astragalus,距骨;talus,遠端少肉骨骼,4,Y
+central tarsal,centrotarsal;naviculocuboid;os centrotarsale;centrotarsale;navicular-cuboid,遠端少肉骨骼,5,Y
+os malleolare,malleolus,遠端少肉骨骼,6,Y
+MC,metacarpal;metacarpus;掌骨,遠端少肉骨骼,7,反芻類
+MT,metatarsal;metatarsus;蹠骨,遠端少肉骨骼,8,反芻類
+MP,metapodial;掌蹠骨,遠端少肉骨骼,9,N
+carpometacarpus,,遠端少肉骨骼,10,Y
+tarsometatarsus,,遠端少肉骨骼,11,Y
+phalanx,phalanx*;指骨;趾骨;phalange;phalanges;phalanx 1;phalanx 2;phalanx 3;ph1;ph2;ph3;第一指骨;第二指骨;第三指骨,遠端少肉骨骼,12,N
+sesamoid,,遠端少肉骨骼,13,N
+LB,long bone;long bone fragment;long bone fragments;長骨,其他,1,N
+UN,unknown;un;fragment;fragments;frag;frags;indet;indet.;unidentified;不明;碎片,其他,2,N

@@ -1,0 +1,16 @@
+{
+  "name": "獸骨資料分析工具",
+  "short_name": "獸骨分析",
+  "description": "動物考古獸骨清單的基礎分析：物種相、MNI、骨骼部位、性別、年齡（Lemoine et al. 2014）、表面痕與臼齒測量。資料只在本機處理。",
+  "lang": "zh-Hant-TW",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f3ee",
+  "theme_color": "#2f6b5e",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>獸骨資料分析工具</title>
+<meta name="theme-color" content="#2f6b5e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{
+  --bg:#f6f3ee; --panel:#fffdf9; --ink:#24211d; --muted:#6f685e; --line:#e3ddd2; --line2:#d4ccbe;
+  --accent:#2f6b5e; --accent-ink:#fff; --accent-soft:#e3efeb; --warn:#a4561d; --warn-soft:#f8eadf;
+  --bad:#a33a2c; --bad-soft:#f7e3df; --hl:#fff3c4;
+  --radius:10px; --shadow:0 1px 2px rgba(40,30,10,.06),0 4px 14px rgba(40,30,10,.06);
+  font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.5}
+header{padding:18px 24px 6px;max-width:1500px;margin:0 auto;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+header h1{margin:0;font-size:21px;letter-spacing:.02em}
+header p{margin:0;color:var(--muted);font-size:13px}
+main{max-width:1500px;margin:0 auto;padding:6px 24px 60px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin:12px 0}
+.card h2{margin:0 0 10px;font-size:15.5px}
+.card h3{margin:14px 0 8px;font-size:14.5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted);font-size:12.5px}
+.small{font-size:12.5px}
+button{font:inherit;border:1px solid var(--line2);background:#fff;color:var(--ink);padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.mini{padding:2px 8px;font-size:12.5px}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.dirty{background:var(--warn);border-color:var(--warn);color:#fff}
+input[type=text],input[type=number],select{font:inherit;font-size:13.5px;border:1px solid var(--line2);border-radius:6px;padding:4px 7px;background:#fff;color:var(--ink)}
+input[type=number]{width:80px}
+input[type=color]{width:34px;height:26px;padding:1px;border:1px solid var(--line2);border-radius:5px;background:#fff}
+label{cursor:pointer}
+.layout{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+aside .card{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto}
+.filter{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+.filter .fhead{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.filter .vals{max-height:190px;overflow:auto;margin-top:4px}
+.filter label{display:flex;gap:6px;font-size:13px;align-items:flex-start}
+.filter label .cnt{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line2);margin-bottom:2px}
+.tabs button{border-radius:8px 8px 0 0;border-bottom:none;background:#efe9df}
+.tabs button.on{background:var(--panel);border-color:var(--line2);font-weight:600;color:var(--accent)}
+.tab{display:none}.tab.on{display:block}
+.split{display:grid;grid-template-columns:minmax(330px,0.9fr) 1.1fr;gap:16px;align-items:start}
+@media (max-width:1200px){.split{grid-template-columns:1fr}}
+.tablewrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:4px 8px;border-bottom:1px solid #eee8de;text-align:left;vertical-align:top;white-space:nowrap}
+td.wrap{white-space:normal;min-width:180px;max-width:420px}
+th{position:sticky;top:0;background:#f3eee5;font-weight:600;z-index:1;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.total td{font-weight:600;background:#faf6ef;border-top:1px solid var(--line2)}
+tr.sel td{background:var(--accent-soft)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#f4f8f6}
+tr.mod td{background:var(--hl)}
+tr.off td{color:#aaa;text-decoration:line-through}
+tr.warn td{background:var(--warn-soft)}
+td.star{color:var(--accent);font-weight:700}
+.tbar{display:flex;gap:6px;justify-content:flex-end;margin:6px 0}
+.sp-list{border:1px solid var(--line);border-radius:8px;background:#fff;max-height:620px;overflow:auto}
+.sp-item .updown{display:flex;gap:2px}.sp-item .updown button{padding:0 5px;font-size:11px;line-height:18px}
+.sp-item{display:grid;grid-template-columns:18px 22px 1fr 50px 52px 74px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid #eee8de}
+.sp-item .muted{text-align:right;font-variant-numeric:tabular-nums}
+.sp-item select.msel{font-size:12px;padding:2px;width:74px}
+.sp-item.drag-over{border-top:3px solid var(--accent)}
+.sp-item.excl{opacity:.5}
+.sp-item .handle{cursor:grab;color:#999;user-select:none;text-align:center}
+.sp-item input[type=text]{width:100%}
+.sp-item .raws{grid-column:3 / 7;display:flex;gap:4px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:4px;align-items:center;background:#f1ece3;border-radius:12px;padding:1px 4px 1px 8px;font-size:12px}
+.chip select{font-size:11.5px;padding:0 2px;border:none;background:transparent;max-width:22px}
+.chartcard{display:grid;grid-template-columns:1fr 280px;gap:12px;align-items:start}
+@media (max-width:1100px){.chartcard{grid-template-columns:1fr}}
+.chartbox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px;overflow:auto}
+.chartbox svg{max-width:100%;height:auto;display:block;margin:auto}
+.stylepanel{border:1px solid var(--line);border-radius:8px;background:#fbf9f5;padding:8px 10px;font-size:13px;max-height:640px;overflow:auto}
+.stylepanel .sec{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.stylepanel .f{display:grid;grid-template-columns:86px 1fr;gap:6px;align-items:center;margin:4px 0}
+.stylepanel .f input[type=text]{width:100%}
+.stylepanel .f input[type=range]{width:100%}
+.stylepanel .colors3{max-height:300px;overflow:auto}
+.stylepanel .crow{display:grid;grid-template-columns:34px 1fr;gap:2px 8px;align-items:center;padding:3px 0;border-bottom:1px dashed #e8e2d6}
+.stylepanel .crow .cname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stylepanel .crow .cctl{grid-column:1 / 3;display:flex;gap:4px;flex-wrap:wrap}
+.stylepanel .crow .cctl select{font-size:12px;padding:2px 4px;max-width:100%}
+.status{font-size:13px;color:var(--muted)}
+.status b{color:var(--ink)}
+.notice{background:var(--warn-soft);border:1px solid #ecc9ad;border-radius:8px;padding:8px 12px;font-size:13px;margin:8px 0}
+.okbox{background:var(--accent-soft);border:1px solid #bcd9cf;border-radius:8px;padding:8px 12px;font-size:13px;margin:8px 0}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+details summary{cursor:pointer;color:var(--accent);font-size:13.5px;margin:6px 0}
+dialog{border:1px solid var(--line2);border-radius:12px;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.2);min-width:360px}
+@media (pointer:coarse){button{padding:8px 14px}button.mini{padding:5px 10px}input[type=checkbox]{width:20px;height:20px}select,input[type=text],input[type=number]{padding:7px 9px}}
+dialog.wide{width:min(900px,94vw)}
+.dlgbody{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.dlgbody table td{vertical-align:middle}
+.dlgbody select{max-width:260px}
+dialog::backdrop{background:rgba(30,25,15,.35)}
+dialog .f{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;margin:6px 0}
+.pill{display:inline-block;padding:0 7px;border-radius:9px;background:#eee;font-size:11.5px;color:#555}
+.pill.mod{background:var(--hl);color:#7a5a00}
+.ctl{display:flex;gap:6px;align-items:center;font-size:13.5px}
+.segs button{border-radius:0;margin-left:-1px}.segs button:first-child{border-radius:7px 0 0 7px}.segs button:last-child{border-radius:0 7px 7px 0}
+.segs button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600;position:relative}
+.helptext{font-size:13px;line-height:1.7}
+.helptext li{margin:3px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>獸骨資料分析工具</h1>
+  <p>讀取遺址原始清單，以篩選與勾選即時重算動物相、MNI、骨骼部位、性別、年齡、表面痕與臼齒測量，並繪圖匯出。資料只在本機處理。</p>
+</header>
+<main>
+  <div class="card" id="loadCard">
+    <h2>1. 選擇資料</h2>
+    <div class="row">
+      <button class="primary" id="pickDir">選擇「獸骨資料整理」資料夾</button>
+      <label class="muted"><input type="file" id="pickFallback" webkitdirectory multiple hidden><span style="text-decoration:underline">唯讀選資料夾</span></label>
+      <label class="muted"><input type="file" id="pickFiles" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden><span style="text-decoration:underline">選擇檔案（平板）</span></label>
+      <span class="status" id="rootStatus">尚未選擇資料夾（建議使用 Chrome 或 Edge，才能把設定與圖檔直接存回資料夾）</span>
+    </div>
+    <div class="notice" id="pickHint" style="display:none">這個瀏覽器不能直接讀寫資料夾（平板、Safari、Firefox）。請按「選擇檔案（平板）」選清單（csv 或 xlsx，可一併選測量值解析工具輸出的長表）。設定會存在這台裝置的瀏覽器中，也可下載備份。</div>
+    <div class="row" id="siteRow" style="margin-top:10px;display:none">
+      <span class="ctl">遺址 <select id="siteSel"></select></span>
+      <span class="ctl">清單 <select id="csvSel"></select></span>
+      <span class="ctl" id="sheetCtl" style="display:none">工作表 <select id="sheetSel"></select></span>
+      <button class="primary" id="loadBtn">載入</button>
+      <span class="status" id="loadStatus"></span>
+    </div>
+    <div class="row" id="loadTools" style="margin-top:8px;display:none"></div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="layout">
+      <aside>
+        <div class="card">
+          <h2>資料篩選</h2>
+          <div class="status" id="filterStatus"></div>
+          <div id="filters"></div>
+          <div class="row" style="margin-top:10px">
+            <select id="addFilterSel"><option value="">＋ 新增篩選欄位…</option></select>
+          </div>
+          <div class="filter">
+            <button id="saveBtn" style="width:100%">儲存設定到「分析結果」</button>
+            <div class="muted" id="saveStatus" style="margin-top:4px"></div>
+          </div>
+        </div>
+      </aside>
+      <section>
+        <div class="tabs" id="tabs"></div>
+        <div id="tabBody"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<dialog id="fieldDlg" class="wide">
+  <h3 style="margin:0 0 6px">欄位對照</h3>
+  <div class="muted" style="margin-bottom:8px">指定清單中哪一欄對應到分析用的標準欄位。<b>*</b> 為必要欄位；沒有的欄位選「（沒有）」。設定會存成「分析結果/欄位對照.csv」，下次自動套用。</div>
+  <div id="fieldBody" class="dlgbody"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><span class="muted" id="fieldMsg" style="margin-right:auto"></span>
+    <button id="fieldCancel">取消</button><button class="primary" id="fieldOk">確定</button></div>
+</dialog>
+
+<dialog id="unkDlg" class="wide">
+  <h3 style="margin:0 0 6px">認不得的名稱</h3>
+  <div class="muted" style="margin-bottom:8px">以下骨骼或側別寫法不在 程式/設定 的對照表中。請指定歸入哪個標準部位，或新增為獨立部位。確定後會寫入 程式/設定/骨骼分類.csv、側別對照.csv，以後所有遺址共用。</div>
+  <div id="unkBody" class="dlgbody"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px">
+    <button id="unkLater">稍後處理（暫時歸入「其他」）</button><button class="primary" id="unkOk">確定</button></div>
+</dialog>
+
+<dialog id="pngDlg">
+  <h3 style="margin:0 0 10px">匯出圖檔</h3>
+  <div class="f"><span>格式</span><span class="row"><label><input type="radio" name="pfmt" value="png" checked> PNG</label><label><input type="radio" name="pfmt" value="svg"> SVG（向量）</label></span></div>
+  <div class="f"><span>尺寸單位</span><span class="row"><label><input type="radio" name="pmode" value="cm" checked> 公分＋DPI</label><label><input type="radio" name="pmode" value="px"> 像素＋倍率</label></span></div>
+  <div class="f"><span>寬</span><span><input type="number" id="pW" step="0.1"> <span id="pWu">cm</span></span></div>
+  <div class="f"><span>高</span><span><input type="number" id="pH" step="0.1"> <span id="pHu">cm</span></span></div>
+  <div class="f" id="pDpiRow"><span>解析度</span><span><select id="pDpi"><option>150</option><option selected>300</option><option>600</option></select> DPI</span></div>
+  <div class="f" id="pScaleRow" style="display:none"><span>倍率</span><span><select id="pScale"><option>1</option><option selected>2</option><option>3</option><option>4</option></select> ×</span></div>
+  <div class="f"><span>檔名</span><input type="text" id="pName"></div>
+  <div class="muted" id="pInfo"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px">
+    <button id="pCancel">取消</button><button class="primary" id="pGo">匯出</button>
+  </div>
+</dialog>
+
+<script>/*XLSX*/</script>
+<script>/*CORE*/</script>
+<script>/*CHARTS*/</script>
+<script>/*UI*/</script>
+</body>
+</html>

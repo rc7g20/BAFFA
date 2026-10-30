@@ -1,0 +1,3084 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>獸骨資料分析工具</title>
+<meta name="theme-color" content="#2f6b5e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{
+  --bg:#f6f3ee; --panel:#fffdf9; --ink:#24211d; --muted:#6f685e; --line:#e3ddd2; --line2:#d4ccbe;
+  --accent:#2f6b5e; --accent-ink:#fff; --accent-soft:#e3efeb; --warn:#a4561d; --warn-soft:#f8eadf;
+  --bad:#a33a2c; --bad-soft:#f7e3df; --hl:#fff3c4;
+  --radius:10px; --shadow:0 1px 2px rgba(40,30,10,.06),0 4px 14px rgba(40,30,10,.06);
+  font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.5}
+header{padding:18px 24px 6px;max-width:1500px;margin:0 auto;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+header h1{margin:0;font-size:21px;letter-spacing:.02em}
+header p{margin:0;color:var(--muted);font-size:13px}
+main{max-width:1500px;margin:0 auto;padding:6px 24px 60px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin:12px 0}
+.card h2{margin:0 0 10px;font-size:15.5px}
+.card h3{margin:14px 0 8px;font-size:14.5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted);font-size:12.5px}
+.small{font-size:12.5px}
+button{font:inherit;border:1px solid var(--line2);background:#fff;color:var(--ink);padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.mini{padding:2px 8px;font-size:12.5px}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.dirty{background:var(--warn);border-color:var(--warn);color:#fff}
+input[type=text],input[type=number],select{font:inherit;font-size:13.5px;border:1px solid var(--line2);border-radius:6px;padding:4px 7px;background:#fff;color:var(--ink)}
+input[type=number]{width:80px}
+input[type=color]{width:34px;height:26px;padding:1px;border:1px solid var(--line2);border-radius:5px;background:#fff}
+label{cursor:pointer}
+.layout{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+aside .card{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto}
+.filter{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+.filter .fhead{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.filter .vals{max-height:190px;overflow:auto;margin-top:4px}
+.filter label{display:flex;gap:6px;font-size:13px;align-items:flex-start}
+.filter label .cnt{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line2);margin-bottom:2px}
+.tabs button{border-radius:8px 8px 0 0;border-bottom:none;background:#efe9df}
+.tabs button.on{background:var(--panel);border-color:var(--line2);font-weight:600;color:var(--accent)}
+.tab{display:none}.tab.on{display:block}
+.split{display:grid;grid-template-columns:minmax(330px,0.9fr) 1.1fr;gap:16px;align-items:start}
+@media (max-width:1200px){.split{grid-template-columns:1fr}}
+.tablewrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:4px 8px;border-bottom:1px solid #eee8de;text-align:left;vertical-align:top;white-space:nowrap}
+td.wrap{white-space:normal;min-width:180px;max-width:420px}
+th{position:sticky;top:0;background:#f3eee5;font-weight:600;z-index:1;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.total td{font-weight:600;background:#faf6ef;border-top:1px solid var(--line2)}
+tr.sel td{background:var(--accent-soft)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#f4f8f6}
+tr.mod td{background:var(--hl)}
+tr.off td{color:#aaa;text-decoration:line-through}
+tr.warn td{background:var(--warn-soft)}
+td.star{color:var(--accent);font-weight:700}
+.tbar{display:flex;gap:6px;justify-content:flex-end;margin:6px 0}
+.sp-list{border:1px solid var(--line);border-radius:8px;background:#fff;max-height:620px;overflow:auto}
+.sp-item .updown{display:flex;gap:2px}.sp-item .updown button{padding:0 5px;font-size:11px;line-height:18px}
+.sp-item{display:grid;grid-template-columns:18px 22px 1fr 50px 52px 74px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid #eee8de}
+.sp-item .muted{text-align:right;font-variant-numeric:tabular-nums}
+.sp-item select.msel{font-size:12px;padding:2px;width:74px}
+.sp-item.drag-over{border-top:3px solid var(--accent)}
+.sp-item.excl{opacity:.5}
+.sp-item .handle{cursor:grab;color:#999;user-select:none;text-align:center}
+.sp-item input[type=text]{width:100%}
+.sp-item .raws{grid-column:3 / 7;display:flex;gap:4px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:4px;align-items:center;background:#f1ece3;border-radius:12px;padding:1px 4px 1px 8px;font-size:12px}
+.chip select{font-size:11.5px;padding:0 2px;border:none;background:transparent;max-width:22px}
+.chartcard{display:grid;grid-template-columns:1fr 280px;gap:12px;align-items:start}
+@media (max-width:1100px){.chartcard{grid-template-columns:1fr}}
+.chartbox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px;overflow:auto}
+.chartbox svg{max-width:100%;height:auto;display:block;margin:auto}
+.stylepanel{border:1px solid var(--line);border-radius:8px;background:#fbf9f5;padding:8px 10px;font-size:13px;max-height:640px;overflow:auto}
+.stylepanel .sec{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.stylepanel .f{display:grid;grid-template-columns:86px 1fr;gap:6px;align-items:center;margin:4px 0}
+.stylepanel .f input[type=text]{width:100%}
+.stylepanel .f input[type=range]{width:100%}
+.stylepanel .colors3{max-height:300px;overflow:auto}
+.stylepanel .crow{display:grid;grid-template-columns:34px 1fr;gap:2px 8px;align-items:center;padding:3px 0;border-bottom:1px dashed #e8e2d6}
+.stylepanel .crow .cname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stylepanel .crow .cctl{grid-column:1 / 3;display:flex;gap:4px;flex-wrap:wrap}
+.stylepanel .crow .cctl select{font-size:12px;padding:2px 4px;max-width:100%}
+.status{font-size:13px;color:var(--muted)}
+.status b{color:var(--ink)}
+.notice{background:var(--warn-soft);border:1px solid #ecc9ad;border-radius:8px;padding:8px 12px;font-size:13px;margin:8px 0}
+.okbox{background:var(--accent-soft);border:1px solid #bcd9cf;border-radius:8px;padding:8px 12px;font-size:13px;margin:8px 0}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+details summary{cursor:pointer;color:var(--accent);font-size:13.5px;margin:6px 0}
+dialog{border:1px solid var(--line2);border-radius:12px;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.2);min-width:360px}
+@media (pointer:coarse){button{padding:8px 14px}button.mini{padding:5px 10px}input[type=checkbox]{width:20px;height:20px}select,input[type=text],input[type=number]{padding:7px 9px}}
+dialog.wide{width:min(900px,94vw)}
+.dlgbody{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.dlgbody table td{vertical-align:middle}
+.dlgbody select{max-width:260px}
+dialog::backdrop{background:rgba(30,25,15,.35)}
+dialog .f{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;margin:6px 0}
+.pill{display:inline-block;padding:0 7px;border-radius:9px;background:#eee;font-size:11.5px;color:#555}
+.pill.mod{background:var(--hl);color:#7a5a00}
+.ctl{display:flex;gap:6px;align-items:center;font-size:13.5px}
+.segs button{border-radius:0;margin-left:-1px}.segs button:first-child{border-radius:7px 0 0 7px}.segs button:last-child{border-radius:0 7px 7px 0}
+.segs button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600;position:relative}
+.helptext{font-size:13px;line-height:1.7}
+.helptext li{margin:3px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>獸骨資料分析工具</h1>
+  <p>讀取遺址原始清單，以篩選與勾選即時重算動物相、MNI、骨骼部位、性別、年齡、表面痕與臼齒測量，並繪圖匯出。資料只在本機處理。</p>
+</header>
+<main>
+  <div class="card" id="loadCard">
+    <h2>1. 選擇資料</h2>
+    <div class="row">
+      <button class="primary" id="pickDir">選擇「獸骨資料整理」資料夾</button>
+      <label class="muted"><input type="file" id="pickFallback" webkitdirectory multiple hidden><span style="text-decoration:underline">唯讀選資料夾</span></label>
+      <label class="muted"><input type="file" id="pickFiles" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden><span style="text-decoration:underline">選擇檔案（平板）</span></label>
+      <span class="status" id="rootStatus">尚未選擇資料夾（建議使用 Chrome 或 Edge，才能把設定與圖檔直接存回資料夾）</span>
+    </div>
+    <div class="notice" id="pickHint" style="display:none">這個瀏覽器不能直接讀寫資料夾（平板、Safari、Firefox）。請按「選擇檔案（平板）」選清單（csv 或 xlsx，可一併選測量值解析工具輸出的長表）。設定會存在這台裝置的瀏覽器中，也可下載備份。</div>
+    <div class="row" id="siteRow" style="margin-top:10px;display:none">
+      <span class="ctl">遺址 <select id="siteSel"></select></span>
+      <span class="ctl">清單 <select id="csvSel"></select></span>
+      <span class="ctl" id="sheetCtl" style="display:none">工作表 <select id="sheetSel"></select></span>
+      <button class="primary" id="loadBtn">載入</button>
+      <span class="status" id="loadStatus"></span>
+    </div>
+    <div class="row" id="loadTools" style="margin-top:8px;display:none"></div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="layout">
+      <aside>
+        <div class="card">
+          <h2>資料篩選</h2>
+          <div class="status" id="filterStatus"></div>
+          <div id="filters"></div>
+          <div class="row" style="margin-top:10px">
+            <select id="addFilterSel"><option value="">＋ 新增篩選欄位…</option></select>
+          </div>
+          <div class="filter">
+            <button id="saveBtn" style="width:100%">儲存設定到「分析結果」</button>
+            <div class="muted" id="saveStatus" style="margin-top:4px"></div>
+          </div>
+        </div>
+      </aside>
+      <section>
+        <div class="tabs" id="tabs"></div>
+        <div id="tabBody"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<dialog id="fieldDlg" class="wide">
+  <h3 style="margin:0 0 6px">欄位對照</h3>
+  <div class="muted" style="margin-bottom:8px">指定清單中哪一欄對應到分析用的標準欄位。<b>*</b> 為必要欄位；沒有的欄位選「（沒有）」。設定會存成「分析結果/欄位對照.csv」，下次自動套用。</div>
+  <div id="fieldBody" class="dlgbody"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><span class="muted" id="fieldMsg" style="margin-right:auto"></span>
+    <button id="fieldCancel">取消</button><button class="primary" id="fieldOk">確定</button></div>
+</dialog>
+
+<dialog id="unkDlg" class="wide">
+  <h3 style="margin:0 0 6px">認不得的名稱</h3>
+  <div class="muted" style="margin-bottom:8px">以下骨骼或側別寫法不在 程式/設定 的對照表中。請指定歸入哪個標準部位，或新增為獨立部位。確定後會寫入 程式/設定/骨骼分類.csv、側別對照.csv，以後所有遺址共用。</div>
+  <div id="unkBody" class="dlgbody"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px">
+    <button id="unkLater">稍後處理（暫時歸入「其他」）</button><button class="primary" id="unkOk">確定</button></div>
+</dialog>
+
+<dialog id="pngDlg">
+  <h3 style="margin:0 0 10px">匯出圖檔</h3>
+  <div class="f"><span>格式</span><span class="row"><label><input type="radio" name="pfmt" value="png" checked> PNG</label><label><input type="radio" name="pfmt" value="svg"> SVG（向量）</label></span></div>
+  <div class="f"><span>尺寸單位</span><span class="row"><label><input type="radio" name="pmode" value="cm" checked> 公分＋DPI</label><label><input type="radio" name="pmode" value="px"> 像素＋倍率</label></span></div>
+  <div class="f"><span>寬</span><span><input type="number" id="pW" step="0.1"> <span id="pWu">cm</span></span></div>
+  <div class="f"><span>高</span><span><input type="number" id="pH" step="0.1"> <span id="pHu">cm</span></span></div>
+  <div class="f" id="pDpiRow"><span>解析度</span><span><select id="pDpi"><option>150</option><option selected>300</option><option>600</option></select> DPI</span></div>
+  <div class="f" id="pScaleRow" style="display:none"><span>倍率</span><span><select id="pScale"><option>1</option><option selected>2</option><option>3</option><option>4</option></select> ×</span></div>
+  <div class="f"><span>檔名</span><input type="text" id="pName"></div>
+  <div class="muted" id="pInfo"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px">
+    <button id="pCancel">取消</button><button class="primary" id="pGo">匯出</button>
+  </div>
+</dialog>
+
+<script>
+// xlsx 讀取（取自 獸骨測量值解析工具.html 的 Reader；使用瀏覽器內建 DecompressionStream，不需外部函式庫）
+const Xlsx = (function () {
+  "use strict";
+
+  async function inflateRaw(u8) {
+    const ds = new DecompressionStream("deflate-raw");
+    const stream = new Blob([u8]).stream().pipeThrough(ds);
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  async function unzip(buf) {
+    const u8 = new Uint8Array(buf);
+    const dv = new DataView(buf);
+    let eocd = -1;
+    for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error("不是有效的 xlsx 檔（找不到 zip 目錄）");
+    const n = dv.getUint16(eocd + 10, true);
+    let p = dv.getUint32(eocd + 16, true);
+    const files = {};
+    const td = new TextDecoder("utf-8");
+    for (let k = 0; k < n; k++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) throw new Error("zip 目錄格式錯誤");
+      const method = dv.getUint16(p + 10, true);
+      const csize = dv.getUint32(p + 20, true);
+      const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), cmtLen = dv.getUint16(p + 32, true);
+      const lho = dv.getUint32(p + 42, true);
+      const name = td.decode(u8.subarray(p + 46, p + 46 + nameLen));
+      files[name] = { method, csize, lho };
+      p += 46 + nameLen + extraLen + cmtLen;
+    }
+    return {
+      names: Object.keys(files),
+      async read(name) {
+        const f = files[name];
+        if (!f) return null;
+        const ln = dv.getUint16(f.lho + 26, true), le = dv.getUint16(f.lho + 28, true);
+        const start = f.lho + 30 + ln + le;
+        const data = u8.subarray(start, start + f.csize);
+        const out = f.method === 0 ? data : await inflateRaw(data);
+        return td.decode(out);
+      },
+    };
+  }
+
+  function decodeXml(s) {
+    return s.replace(/&(?:#x([0-9a-fA-F]+)|#([0-9]+)|amp|lt|gt|quot|apos);/g, (m, hx, dc) =>
+      hx ? String.fromCodePoint(parseInt(hx, 16)) : dc ? String.fromCodePoint(parseInt(dc, 10)) :
+      { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&apos;": "'" }[m])
+      .replace(/_x([0-9A-Fa-f]{4})_/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
+  }
+  function textOf(xml) {
+    // 串接 <t> 內容（忽略 <rPh> 注音/拼音）
+    const clean = xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, "");
+    let out = "";
+    const rx = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>|<t(?:\s[^>]*)?\/>/g;
+    let m;
+    while ((m = rx.exec(clean))) out += m[1] ? decodeXml(m[1]) : "";
+    return out;
+  }
+  function colIndex(ref) {
+    const m = /^([A-Z]+)/.exec(ref);
+    let n = 0;
+    for (const ch of m[1]) n = n * 26 + (ch.charCodeAt(0) - 64);
+    return n - 1;
+  }
+
+  async function readXlsx(buf) {
+    const z = await unzip(buf);
+    const wb = await z.read("xl/workbook.xml");
+    const rels = (await z.read("xl/_rels/workbook.xml.rels")) || "";
+    const relMap = {};
+    for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) {
+      const id = /Id="([^"]+)"/.exec(m[0]), tg = /Target="([^"]+)"/.exec(m[0]);
+      if (id && tg) relMap[id[1]] = tg[1];
+    }
+    const sheets = [];
+    for (const m of wb.matchAll(/<sheet\b[^>]*>/g)) {
+      const name = decodeXml(/name="([^"]*)"/.exec(m[0])[1]);
+      const rid = /r:id="([^"]+)"/.exec(m[0]);
+      let target = rid ? relMap[rid[1]] : null;
+      if (!target) continue;
+      target = target.replace(/^\/?xl\//, "").replace(/^\//, "");
+      sheets.push({ name, path: "xl/" + target });
+    }
+    const styles = parseStyles((await z.read("xl/styles.xml")) || "");
+    const ssXml = await z.read("xl/sharedStrings.xml");
+    const shared = [];
+    if (ssXml) for (const m of ssXml.matchAll(/<si>([\s\S]*?)<\/si>|<si\/>/g)) shared.push(m[1] ? textOf(m[1]) : "");
+    return {
+      sheetNames: sheets.map((s) => s.name),
+      async readSheet(name) {
+        const sh = sheets.find((s) => s.name === name);
+        const xml = await z.read(sh.path);
+        const rows = [];
+        const rowRx = /<row\b([^>]*)>([\s\S]*?)<\/row>|<row\b[^>]*\/>/g;
+        let rm;
+        while ((rm = rowRx.exec(xml))) {
+          if (!rm[2]) continue;
+          const rnum = /\br="(\d+)"/.exec(rm[1]);
+          const arr = [];
+          const cellRx = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+          let cm, ci = 0;
+          while ((cm = cellRx.exec(rm[2]))) {
+            const attrs = cm[1], inner = cm[2] || "";
+            const r = /\br="([A-Z]+\d+)"/.exec(attrs);
+            if (r) ci = colIndex(r[1]);
+            const t = (/\bt="([^"]+)"/.exec(attrs) || [])[1];
+            const si = (/\bs="(\d+)"/.exec(attrs) || [])[1];
+            let v = null;
+            if (t === "inlineStr") v = textOf(inner);
+            else {
+              const vm = /<v>([\s\S]*?)<\/v>/.exec(inner);
+              if (vm) {
+                const raw = decodeXml(vm[1]);
+                if (t === "s") v = shared[parseInt(raw, 10)];
+                else if (t === "b") v = raw === "1" ? "TRUE" : "FALSE";
+                else if (t === "str" || t === "e") v = raw;
+                else v = formatNumber(raw, si === undefined ? null : styles[+si]);
+              }
+            }
+            if (typeof v === "string") v = v.replace(/\r\n?/g, "\n");
+            if (v !== null && v !== "") arr[ci] = v;
+            ci++;
+          }
+          rows.push({ r: rnum ? parseInt(rnum[1], 10) : rows.length + 1, cells: arr });
+        }
+        return rows;
+      },
+    };
+  }
+  // ---- 數值格式（讓輸出與 Excel 畫面上看到的一致，例如原代號 00087）
+  const BUILTIN = { 0: "General", 1: "0", 2: "0.00", 3: "#,##0", 4: "#,##0.00", 9: "0%", 10: "0.00%", 11: "0.00E+00",
+    12: "# ?/?", 13: "# ??/??", 14: "yyyy/m/d", 15: "d-mmm-yy", 16: "d-mmm", 17: "mmm-yy", 18: "h:mm AM/PM", 19: "h:mm:ss AM/PM",
+    20: "h:mm", 21: "h:mm:ss", 22: "yyyy/m/d h:mm", 37: "#,##0 ;(#,##0)", 38: "#,##0 ;[Red](#,##0)", 39: "#,##0.00;(#,##0.00)",
+    40: "#,##0.00;[Red](#,##0.00)", 45: "mm:ss", 46: "[h]:mm:ss", 47: "mmss.0", 48: "##0.0E+0", 49: "@" };
+  function parseStyles(xml) {
+    const custom = {};
+    for (const m of xml.matchAll(/<numFmt\b[^>]*>/g)) {
+      const id = /numFmtId="(\d+)"/.exec(m[0]), code = /formatCode="([^"]*)"/.exec(m[0]);
+      if (id && code) custom[+id[1]] = decodeXml(code[1]);
+    }
+    const out = [];
+    const cx = /<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/.exec(xml);
+    if (cx) for (const m of cx[1].matchAll(/<xf\b[^>]*>/g)) {
+      const id = +((/numFmtId="(\d+)"/.exec(m[0]) || [])[1] || 0);
+      out.push(custom[id] ?? BUILTIN[id] ?? "General");
+    }
+    return out;
+  }
+  function formatNumber(raw, fmt) {
+    const x = Number(raw);
+    if (!fmt || fmt === "General" || fmt === "@" || !isFinite(x)) return numStr(raw);
+    let f = fmt.split(";")[x < 0 && fmt.includes(";") ? 1 : 0] || fmt.split(";")[0];
+    f = f.replace(/"[^"]*"/g, "").replace(/\[[^\]]*\]/g, "").replace(/_./g, "").replace(/\\(.)/g, "$1").replace(/[*].?/g, "").trim();
+    const ax = Math.abs(x), neg = x < 0 && !fmt.includes(";");
+    // 日期／時間
+    if (/[ymdhs]/i.test(f) && !/^[#0.,%]+$/.test(f)) {
+      const ms = Math.round((x - 25569) * 86400000);
+      const d = new Date(ms), p2 = (n) => String(n).padStart(2, "0");
+      let out = `${d.getUTCFullYear()}/${p2(d.getUTCMonth() + 1)}/${p2(d.getUTCDate())}`;
+      if (/h/i.test(f)) out += ` ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}` + (/s/i.test(f) ? `:${p2(d.getUTCSeconds())}` : "");
+      if (!/[yd]/i.test(f) && /h/i.test(f)) out = out.slice(11);
+      return out;
+    }
+    const m = /^([#,0]*)(?:\.([0#]+))?(%?)$/.exec(f);
+    if (!m || !/0|#/.test(f)) return numStr(raw);
+    let val = m[3] ? ax * 100 : ax;
+    const minInt = (m[1].match(/0/g) || []).length;
+    const fixed = m[2] ? (m[2].match(/0/g) || []).length : 0, maxDec = m[2] ? m[2].length : 0;
+    let s = val.toFixed(maxDec);
+    if (maxDec > fixed) s = s.replace(new RegExp("0{1," + (maxDec - fixed) + "}$"), "").replace(/\.$/, "");
+    let [ip, dp] = s.split(".");
+    if (ip === "0" && minInt === 0) ip = "";
+    ip = ip.padStart(minInt, "0");
+    if (m[1].includes(",")) ip = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg ? "-" : "") + ip + (dp ? "." + dp : "") + m[3];
+  }
+  function numStr(raw) {
+    const x = Number(raw);
+    if (!isFinite(x)) return raw;
+    if (Number.isInteger(x)) return String(x);
+    return String(parseFloat(x.toPrecision(15)));
+  }
+
+  function decodeText(buf) {
+    try { return new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+    catch (e) { return new TextDecoder("big5").decode(buf); }
+  }
+  function parseCSV(text) {
+    text = text.replace(/^﻿/, "");
+    const rows = [];
+    let row = [], f = "", q = false, i = 0;
+    const delim = (text.split(/\r?\n/)[0].match(/\t/g) || []).length > (text.split(/\r?\n/)[0].match(/,/g) || []).length ? "\t" : ",";
+    while (i < text.length) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+        else f += c;
+      } else if (c === '"') q = true;
+      else if (c === delim) { row.push(f); f = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(f); rows.push(row); row = []; f = "";
+      } else f += c;
+      i++;
+    }
+    if (f !== "" || row.length) { row.push(f); rows.push(row); }
+    return rows.map((cells, k) => ({ r: k + 1, cells: cells.map((x) => (x === "" ? undefined : x)) }));
+  }
+
+  // 將列陣列轉為紀錄（第一個非空列為標題）
+  function toRecords(rows) {
+    const hi = rows.findIndex((r) => r.cells.some((x) => x !== undefined && x !== null && String(x).trim() !== ""));
+    if (hi < 0) return { header: [], records: [] };
+    const header = [];
+    rows[hi].cells.forEach((h, j) => (header[j] = h === undefined ? null : String(h).trim()));
+    const records = [];
+    for (let k = hi + 1; k < rows.length; k++) {
+      const cells = rows[k].cells;
+      if (!cells.some((x) => x !== undefined && x !== null && String(x) !== "")) continue;
+      const o = { __row: rows[k].r };
+      header.forEach((h, j) => { if (h) o[h] = cells[j] === undefined ? null : cells[j]; });
+      records.push(o);
+    }
+    return { header: header.filter((h) => h), records };
+  }
+
+  return { readXlsx, parseCSV, decodeText, toRecords };
+})();
+
+</script>
+<script>
+// ============================================================================
+// 計算核心：讀檔、名稱正規化、各項分析的計算規則（不含介面）
+// ============================================================================
+"use strict";
+const Core = (() => {
+
+  // ---------------------------------------------------------------- CSV
+  function parseCSV(text) {
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+    const rows = []; let row = [], f = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+        else f += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(f); f = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(f); rows.push(row); row = []; f = "";
+      } else f += c;
+    }
+    if (f !== "" || row.length) { row.push(f); rows.push(row); }
+    return fromMatrix(rows.map((r, i) => ({ r: i + 1, cells: r })));
+  }
+  /** 試算表列（[{r:列號, cells:[...]}]）→ {header, rows}；第一個非空列為標題 */
+  function fromMatrix(mrows) {
+    const blank = (r) => !r.cells.some((x) => x !== undefined && x !== null && String(x).trim() !== "");
+    const hi = mrows.findIndex((r) => !blank(r));
+    if (hi < 0) return { header: [], rows: [] };
+    // 重複欄名比照 pandas：第二個「齒位」→「齒位.1」；空白欄名 → 欄N
+    const seen = {};
+    const hc = mrows[hi].cells;
+    const header = [];
+    for (let j = 0; j < hc.length; j++) {
+      let hd = String(hc[j] ?? "").replace(/\s+/g, " ").trim();
+      if (!hd) hd = `欄${j + 1}`;
+      if (seen[hd] === undefined) { seen[hd] = 0; header.push(hd); }
+      else { seen[hd] += 1; header.push(`${hd}.${seen[hd]}`); }
+    }
+    const out = [];
+    for (let k = hi + 1; k < mrows.length; k++) {
+      const r = mrows[k];
+      if (blank(r)) continue;
+      const o = { _列號: r.r };
+      header.forEach((hd, j) => { o[hd] = String(r.cells[j] ?? "").trim(); });
+      out.push(o);
+    }
+    return { header, rows: out };
+  }
+
+  // ---------------------------------------------------------------- 欄位對照
+  // 標準欄位 → 可能的原始欄名（不分大小寫）；required 為必要欄位
+  const FIELDS = [
+    { k: "物種", req: true, syn: ["物種", "種", "species", "taxon", "taxa"] },
+    { k: "骨骼", req: true, syn: ["骨骼", "骨骼部位", "部位", "element", "bone", "skeletal element"] },
+    { k: "數量", req: false, syn: ["數量", "qty", "nisp", "件數", "count", "n", "quantity"] },
+    { k: "側", req: false, syn: ["側", "側別", "side"] },
+    { k: "流水號", req: false, syn: ["流水號", "編號", "標本號", "id", "no", "no.", "specimen"] },
+    { k: "備註", req: false, syn: ["備註", "note", "notes", "remark", "remarks", "說明", "comment", "comments"] },
+    { k: "切割", req: false, syn: ["切割", "切割痕", "cut", "cutmark", "cut marks", "butchery"] },
+    { k: "燒炙", req: false, syn: ["燒炙", "燒痕", "burn", "burning", "burnt"] },
+    { k: "啃咬", req: false, syn: ["啃咬", "啃咬痕", "gnaw", "gnawing", "gnawed"] },
+    { k: "重量", req: false, syn: ["重量", "weight", "wt", "重量(g)", "重量（g）", "weight (g)"] },
+    { k: "性別", req: false, syn: ["性別", "sex"] },
+    { k: "文化層", req: false, syn: ["文化層", "culture", "phase", "period"] },
+    { k: "綱", req: false, syn: ["綱", "class"] },
+    { k: "目", req: false, syn: ["目", "order"] },
+    { k: "科", req: false, syn: ["科", "family"] },
+    { k: "屬", req: false, syn: ["屬", "genus"] },
+  ];
+  const TAXON_LEVELS = ["綱", "目", "科", "屬", "物種"];
+  /** 回傳 {標準欄位: 原始欄名 | ""} */
+  function detectFields(header, saved = {}) {
+    const low = new Map(header.map((x) => [String(x).toLowerCase().trim(), x]));
+    const out = {};
+    for (const f of FIELDS) {
+      if (saved[f.k] !== undefined && (saved[f.k] === "" || header.includes(saved[f.k]))) { out[f.k] = saved[f.k]; continue; }
+      out[f.k] = "";
+      for (const s of f.syn) if (low.has(s)) { out[f.k] = low.get(s); break; }
+    }
+    return out;
+  }
+  /** 依對照在每列加上標準欄位（保留原欄位）；回傳缺少的必要欄位 */
+  function applyFields(rows, map) {
+    for (const [std, src] of Object.entries(map)) {
+      if (!src || src === std) continue;
+      for (const r of rows) r[std] = r[src];
+    }
+    return FIELDS.filter((f) => f.req && !map[f.k]).map((f) => f.k);
+  }
+
+  function toCSV(header, rows) {
+    const esc = (v) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    return "﻿" + [header.map(esc).join(",")].concat(rows.map((r) =>
+      header.map((h) => esc(Array.isArray(r) ? r[header.indexOf(h)] : r[h])).join(","))).join("\r\n") + "\r\n";
+  }
+
+  // ---------------------------------------------------------------- 小工具
+  const groupBy = (arr, keyFn) => {
+    const m = new Map();
+    for (const x of arr) { const k = keyFn(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }
+    return m;
+  };
+  const sum = (arr, f = (x) => x) => arr.reduce((a, x) => a + f(x), 0);
+  const uniq = (arr) => [...new Set(arr)];
+
+  function qtyOf(v) {
+    const m = /^(\d+(?:\.\d+)?)\+?$/.exec(String(v).trim());
+    return m ? parseFloat(m[1]) : null;
+  }
+
+  // ---------------------------------------------------------------- 設定
+  const DEFAULT_ELEMENTS = `標準名稱,別名,骨骼區域,部位順序,側別MNI
+skull,頭骨;顱骨,顱部,1,N
+cranium,,顱部,2,N
+maxilla,上顎;上頜,顱部,3,Y
+premaxilla,,顱部,4,Y
+nasal,,顱部,5,N
+zygomatic,,顱部,6,N
+mandible,下顎;下頜,顱部,7,Y
+hyoid,,顱部,8,N
+tooth,牙齒,顱部,9,N
+antler,鹿角,顱部,10,N
+atlas,,軀幹,1,N
+axis,,軀幹,2,N
+cervical,cervical vertebra;頸椎,軀幹,3,N
+thoracic,thoracic vertebra;胸椎,軀幹,4,N
+lumbar,lumbar vertebra;腰椎,軀幹,5,N
+sacrum,薦椎;synsacrum,軀幹,6,N
+caudal,caudal vertebra;尾椎;尾骨,軀幹,7,N
+vertebrae,vertebra;脊椎,軀幹,8,N
+rib,肋骨,軀幹,9,N
+sternum,胸骨,軀幹,10,N
+pelvis,盆骨;骨盆;innominate;os coxae,軀幹,11,Y
+ilium,,軀幹,12,Y
+ischium,,軀幹,13,Y
+pubis,,軀幹,14,Y
+scapula,肩胛骨,近端多肉骨骼,1,Y
+humerus,肱骨,近端多肉骨骼,2,Y
+radius,橈骨,近端多肉骨骼,3,Y
+ulna,尺骨,近端多肉骨骼,4,Y
+radio-ulna,radioulna;radius+ulna;radius & ulna;radius and ulna,近端多肉骨骼,5,Y
+femur,股骨,近端多肉骨骼,6,Y
+patella,髕骨,近端多肉骨骼,7,Y
+tibia,脛骨,近端多肉骨骼,8,Y
+fibula,腓骨,近端多肉骨骼,9,Y
+tibio-fibula,tibiofibula,近端多肉骨骼,10,Y
+coracoid,,近端多肉骨骼,11,Y
+clavicle,,近端多肉骨骼,12,N
+wishbone,furcula,近端多肉骨骼,13,N
+tibiotarsus,,近端多肉骨骼,14,Y
+carpus,腕骨,遠端少肉骨骼,1,N
+tarsus,跗骨,遠端少肉骨骼,2,N
+calcaneus,跟骨,遠端少肉骨骼,3,Y
+astragalus,距骨;talus,遠端少肉骨骼,4,Y
+central tarsal,centrotarsal;naviculocuboid;os centrotarsale;centrotarsale;navicular-cuboid,遠端少肉骨骼,5,Y
+os malleolare,malleolus,遠端少肉骨骼,6,Y
+MC,metacarpal;metacarpus;掌骨,遠端少肉骨骼,7,反芻類
+MT,metatarsal;metatarsus;蹠骨,遠端少肉骨骼,8,反芻類
+MP,metapodial;掌蹠骨,遠端少肉骨骼,9,N
+carpometacarpus,,遠端少肉骨骼,10,Y
+tarsometatarsus,,遠端少肉骨骼,11,Y
+phalanx,phalanx*;指骨;趾骨;phalange;phalanges;phalanx 1;phalanx 2;phalanx 3;ph1;ph2;ph3;第一指骨;第二指骨;第三指骨,遠端少肉骨骼,12,N
+sesamoid,,遠端少肉骨骼,13,N
+LB,long bone;long bone fragment;long bone fragments;長骨,其他,1,N
+UN,unknown;un;fragment;fragments;frag;frags;indet;indet.;unidentified;不明;碎片,其他,2,N
+`;
+  const DEFAULT_ALIASES = `資料名稱,中文名,反芻類
+Sus,豬,N
+cervus,梅花鹿,Y
+muntjac,羌,Y
+獐,獐,Y
+小鹿,小型鹿,Y
+偶蹄目,偶蹄目,N
+lupus,狗,N
+Canis,狗,N
+犬,狗,N
+犬屬,狗,N
+野豬屬,豬,N
+Sus scrofa,豬,N
+臺灣梅花鹿,梅花鹿,Y
+台灣梅花鹿,梅花鹿,Y
+Cervus nippon,梅花鹿,Y
+鹿屬,梅花鹿,Y
+山羌,羌,Y
+麂屬,羌,Y
+獐屬,獐,Y
+水鹿屬,水鹿,Y
+`;
+  const REGION_ORDER = ["顱部", "軀幹", "近端多肉骨骼", "遠端少肉骨骼", "其他"];
+
+  const DEFAULT_SIDES = `原始寫法,歸入
+Indet.,UN
+Indet,UN
+Indeterminate,UN
+Unknown,UN
+R/L,UN
+L/R,UN
+R or L,UN
+N/A,-
+NA,-
+n/a,-
+`;
+  function makeConfig(elementsCSV, aliasesCSV, sidesCSV) {
+    const et = parseCSV(elementsCSV || DEFAULT_ELEMENTS).rows;
+    const al = parseCSV(aliasesCSV || DEFAULT_ALIASES).rows;
+    const idx = {}, info = {};
+    for (const r of et) {
+      idx[r.標準名稱.toLowerCase()] = r.標準名稱;
+      for (const a of [r.標準名稱, ...String(r.別名 || "").split(";")]) {
+        const k = a.trim().toLowerCase(); if (!k) continue;
+        idx[k] = r.標準名稱; idx[k.replace(/[\s\-_]+/g, "")] = r.標準名稱;
+      }
+      info[r.標準名稱] = { region: r.骨骼區域, order: Number(r.部位順序), mni: r.側別MNI };
+    }
+    const sideMap = {};
+    for (const r of parseCSV(DEFAULT_SIDES).rows.concat(sidesCSV ? parseCSV(sidesCSV).rows : [])) sideMap[String(r.原始寫法).trim().toUpperCase()] = r.歸入;
+    return {
+      elements: et, aliases: al, idx, info, sideMap,
+      ruminants: new Set(al.filter((r) => String(r.反芻類).toUpperCase() === "Y").map((r) => r.資料名稱)),
+    };
+  }
+
+  const VERT_KEYS = [["cervical", /cervical|頸椎/i], ["thoracic", /thoracic|胸椎/i], ["lumbar", /lumbar|腰椎/i],
+    ["sacrum", /sacr|薦椎/i], ["caudal", /caudal|尾椎/i]];
+
+  /** 依序嘗試：原樣 → 去掉 *? → 去掉括號註記 → 去掉空白與連字號 → 去掉結尾數字（Phalange 1） */
+  function lookupElement(cfg, name) {
+    const s = String(name || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (!s) return "UN";
+    const tries = [s, s.replace(/[*?？]+$/, "").trim()];
+    tries.push(tries[1].replace(/\s*[(（][^)）]*[)）]\s*/g, " ").trim());
+    tries.push(tries[2].replace(/[\s\-_]+/g, ""));
+    tries.push(tries[2].replace(/\s*\d+$/, "").trim(), tries[3].replace(/\d+$/, ""));
+    tries.push(tries[4].replace(/s$/, ""), tries[4].replace(/es$/, ""));
+    tries.push(tries[2].replace(/\s+bones?$/, "").trim(), tries[2].replace(/\s+/g, ""));
+    for (const t of tries) if (t && cfg.idx[t] !== undefined) return cfg.idx[t];
+    return null;
+  }
+  function isKnownElement(cfg, name) { return lookupElement(cfg, name) !== null; }
+  function normalizeElement(cfg, name, note = "") {
+    const s = String(name || "").replace(/\s+/g, " ").trim();
+    const std = lookupElement(cfg, s);
+    if (std === null) return s || "UN";
+    if (std === "vertebrae" && note) {
+      const hits = VERT_KEYS.filter(([, p]) => p.test(note)).map(([k]) => k);
+      if (hits.length === 1) return hits[0];
+    }
+    return std;
+  }
+  function elementInfo(cfg, std) {
+    const i = cfg.info[std];
+    if (!i) return { region: "其他", regionIdx: 4, order: 999, mni: "N" };
+    const ri = REGION_ORDER.indexOf(i.region);
+    return { region: i.region, regionIdx: ri < 0 ? 99 : ri, order: i.order, mni: i.mni };
+  }
+
+  function normalizeSide(v, cfg = null) {
+    const s = String(v ?? "").trim();
+    if (cfg && cfg.sideMap && cfg.sideMap[s.toUpperCase()] !== undefined) return cfg.sideMap[s.toUpperCase()];
+    const u = s.toUpperCase().replace(/[*?？]+$/, "").trim();
+    if (["L", "LEFT", "左"].includes(u)) return "L";
+    if (["R", "RIGHT", "右"].includes(u)) return "R";
+    if (["AX", "AXIAL", "中"].includes(u)) return "Ax";
+    if (["", "-", "—"].includes(u)) return "-";
+    if (["UN", "?", "？"].includes(u)) return "UN";
+    return s;
+  }
+  const SIDE_ORDER = { L: 0, R: 1, Ax: 2, "-": 3, UN: 4 };
+  const sideIdx = (s) => (s in SIDE_ORDER ? SIDE_ORDER[s] : 5);
+
+  const ZONE_COLS = ["1", "2", "3", "4", "5", "6", "7", "8"];
+  const zonesOf = (r) => ZONE_COLS.filter((c) => c in r && !["", "-"].includes(String(r[c]).trim()));
+
+  // ---------------------------------------------------------------- 物種對照
+  const SIZE_PAT = /sze|size/i;
+  const NON_FAUNA = new Set(["陶", "石", "pottery", "stone"]);
+  const NON_TAXON = /sze|size|^un$|^unknown$|^不明$|^indet/i;
+  const IDENT_EXCL = /sze|size|^UN$|^unknown$|^不明$|^indet/i;
+
+  /** 物種設定：groups = [{name, order, include, raws:[{raw,n,nisp}]}] */
+  function defaultSpeciesGroups(rows, existing = null, col = "物種") {
+    const cnt = new Map(), nisp = new Map();
+    for (const r of rows) {
+      const v = r[col] ?? "";
+      cnt.set(v, (cnt.get(v) || 0) + 1);
+      nisp.set(v, (nisp.get(v) || 0) + (qtyOf(r.數量) ?? 1));
+    }
+    const groups = existing ? existing.map((g) => ({ ...g, raws: g.raws.map((x) => ({ ...x })) })) : [];
+    const known = new Map();
+    groups.forEach((g) => g.raws.forEach((x) => known.set(x.raw, g)));
+    // 已知名稱：更新筆數
+    for (const g of groups) for (const x of g.raws) { x.n = cnt.get(x.raw) || 0; x.nisp = nisp.get(x.raw) || 0; }
+    const newNames = [...cnt.keys()].filter((n) => !known.has(n));
+    if (!newNames.length) return { groups, added: [] };
+    const byLow = groupBy(newNames, (n) => n.toLowerCase());
+    const fresh = [];
+    for (const [low, names] of byLow) {
+      // 若已有同小寫的群組，併入
+      const exist = groups.find((g) => g.name.toLowerCase() === low || g.raws.some((x) => x.raw.toLowerCase() === low));
+      const raws = names.map((n) => ({ raw: n, n: cnt.get(n), nisp: nisp.get(n) })).sort((a, b) => b.n - a.n);
+      if (exist) { exist.raws.push(...raws); continue; }
+      const cat = /^(un|unknown|unid|不明|indet\.?)$/.test(low) ? 3 : SIZE_PAT.test(low) ? 2 : NON_FAUNA.has(low) ? 4 : 1;
+      fresh.push({ name: raws[0].raw, include: cat !== 4, raws, _cat: cat, _tot: sum(raws, (x) => x.nisp) });
+    }
+    fresh.sort((a, b) => a._cat - b._cat || b._tot - a._tot || a.name.localeCompare(b.name));
+    let start = groups.length ? Math.max(...groups.map((g) => g.order)) + 1 : 1;
+    for (const g of fresh) { g.order = start++; delete g._cat; delete g._tot; groups.push(g); }
+    return { groups, added: newNames };
+  }
+
+  function groupsFromCSV(text) {
+    const rows = parseCSV(text).rows;
+    const m = new Map();
+    for (const r of rows) {
+      const name = r.合併名稱 || r.原始名稱;
+      if (!m.has(name)) m.set(name, { name, order: Number(r.排序) || 999, include: String(r.納入動物相 || "Y").toUpperCase() !== "N", raws: [] });
+      m.get(name).raws.push({ raw: r.原始名稱, n: Number(r.筆數) || 0, nisp: 0 });
+    }
+    return [...m.values()];
+  }
+  function groupsToCSV(groups) {
+    const out = [];
+    [...groups].sort((a, b) => a.order - b.order).forEach((g) => g.raws.forEach((x) =>
+      out.push({ 原始名稱: x.raw, 合併名稱: g.name, 筆數: x.n, 排序: g.order, 納入動物相: g.include ? "Y" : "N" })));
+    return toCSV(["原始名稱", "合併名稱", "筆數", "排序", "納入動物相"], out);
+  }
+
+  function resolveSpecies(cfg, groups, name) {
+    const hit = cfg.aliases.find((a) => name === a.中文名 || name === a.資料名稱);
+    if (hit) {
+      const cands = cfg.aliases.filter((a) => a.中文名 === hit.中文名).map((a) => a.資料名稱);
+      for (const c of [name, ...cands]) {
+        const g = groups.find((g) => g.name === c) || groups.find((g) => g.raws.some((x) => x.raw === c));
+        if (g) return g.name;
+      }
+    }
+    const g = groups.find((g) => g.name === name) || groups.find((g) => g.name.toLowerCase() === String(name).toLowerCase())
+      || groups.find((g) => g.raws.some((x) => x.raw.toLowerCase() === String(name).toLowerCase()));
+    return g ? g.name : null;
+  }
+
+  // ---------------------------------------------------------------- 準備資料
+  /** 為每列加上計算欄位；log 收集警示 */
+  function prepare(rows, cfg, groups) {
+    const log = [];
+    const map = new Map(); const ord = new Map(); const inc = new Map();
+    for (const g of groups) for (const x of g.raws) { map.set(x.raw, g.name); ord.set(g.name, g.order); inc.set(g.name, g.include); }
+    for (const r of rows) {
+      const q = qtyOf(r.數量);
+      if (q === null) log.push({ 類型: "數量非數字", 流水號: r.流水號, 原表列號: r._列號, 內容: `「${r.數量}」視為 1` });
+      r._qty = q ?? 1;
+      r._sp = map.get(r.物種) ?? r.物種;
+      r._spOrder = ord.get(r._sp) ?? 9999;
+      r._spInclude = inc.get(r._sp) ?? true;
+      r._el = normalizeElement(cfg, r.骨骼, r.備註 || "");
+      const i = elementInfo(cfg, r._el);
+      r._region = i.region; r._regionIdx = i.regionIdx; r._elIdx = i.order; r._mni = i.mni;
+      r._side = normalizeSide(r.側, cfg);
+    }
+    return log;
+  }
+
+  const spOrderMap = (groups) => new Map(groups.map((g) => [g.name, g.order]));
+
+  // ---------------------------------------------------------------- 動物相
+  /** col：計算的分類欄（預設物種）；groups：該欄的名稱合併與排序設定 */
+  function fauna(rows, groups, col = "物種") {
+    const ord = spOrderMap(groups);
+    let use;
+    if (col === "物種") use = rows.filter((r) => r._spInclude).map((r) => [r._sp, r]);
+    else {
+      const map = new Map(), inc = new Map();
+      for (const g of groups) for (const x of g.raws) { map.set(x.raw, g.name); inc.set(g.name, g.include); }
+      use = rows.map((r) => [map.get(r[col] ?? "") ?? (r[col] ?? ""), r]).filter(([k]) => inc.get(k) !== false);
+    }
+    const by = groupBy(use, (x) => x[0]);
+    const hasW = rows.some((r) => r.重量 !== undefined && r.重量 !== "");
+    const wOf = (r) => { const m = /^\s*(\d+(?:\.\d+)?)/.exec(String(r.重量 ?? "")); return m ? parseFloat(m[1]) : 0; };
+    let t = [...by].map(([sp, xs]) => {
+      const rs = xs.map((x) => x[1]);
+      const o = { 物種: sp, NISP: sum(rs, (r) => r._qty), 筆數: rs.length };
+      if (hasW) o.重量 = sum(rs, wOf);
+      return o;
+    });
+    t.sort((a, b) => (ord.get(a.物種) ?? 9999) - (ord.get(b.物種) ?? 9999) || b.NISP - a.NISP);
+    const total = sum(t, (x) => x.NISP);
+    const idTotal = sum(t.filter((x) => !IDENT_EXCL.test(x.物種)), (x) => x.NISP);
+    t.forEach((x) => { x.百分比 = total ? x.NISP / total : 0; x.可鑑定百分比 = IDENT_EXCL.test(x.物種) ? null : (idTotal ? x.NISP / idTotal : 0); });
+    const wTotal = hasW ? sum(t, (x) => x.重量) : null;
+    if (hasW) t.forEach((x) => (x.重量百分比 = wTotal ? x.重量 / wTotal : 0));
+    return { table: t, total, idTotal, hasW, wTotal };
+  }
+
+  // ---------------------------------------------------------------- MNI
+  /** override: {物種: {骨骼: true/false}} */
+  function mniEligible(r, cfg, override) {
+    const o = override && override[r._sp] && override[r._sp][r._el];
+    if (o === true || o === false) return o;
+    return r._mni === "Y" || (r._mni === "反芻類" && cfg.ruminants.has(r._sp));
+  }
+  function mniDefault(cfg, sp, el) {
+    const i = elementInfo(cfg, el);
+    return i.mni === "Y" || (i.mni === "反芻類" && cfg.ruminants.has(sp));
+  }
+
+  function chromatic(sets) {
+    const n = sets.length;
+    if (!n) return 0;
+    const adj = sets.map((a, i) => sets.map((b, j) => i !== j && a.some((z) => b.includes(z))));
+    const zc = {};
+    for (const s of sets) for (const z of s) zc[z] = (zc[z] || 0) + 1;
+    const lower = Math.max(1, ...Object.values(zc));
+    const order = [...Array(n).keys()].sort((a, b) => adj[b].filter(Boolean).length - adj[a].filter(Boolean).length);
+    if (n > 80) {
+      const color = {};
+      for (const v of order) {
+        const used = new Set(Object.keys(color).filter((u) => adj[v][u]).map((u) => color[u]));
+        let c = 0; while (used.has(c)) c++; color[v] = c;
+      }
+      return Math.max(...Object.values(color)) + 1;
+    }
+    const can = (k) => {
+      const color = new Array(n).fill(-1);
+      const bt = (pos) => {
+        if (pos === n) return true;
+        const v = order[pos];
+        const used = new Set();
+        for (let u = 0; u < n; u++) if (adj[v][u] && color[u] >= 0) used.add(color[u]);
+        const maxc = Math.max(-1, ...color) + 1;
+        for (let c = 0; c < Math.min(k, maxc + 1); c++) {
+          if (!used.has(c)) { color[v] = c; if (bt(pos + 1)) return true; color[v] = -1; }
+        }
+        return false;
+      };
+      return bt(0);
+    };
+    let k = lower; while (!can(k)) k++;
+    return k;
+  }
+
+  /** 回傳 {species:[{物種,側別MNI,側別依據,區位MNI,區位依據}], detail:{物種:[部位列]}} */
+  function mni(rows, cfg, groups, override) {
+    const ord = spOrderMap(groups);
+    const base = rows.filter((r) => r._spInclude && !NON_TAXON.test(r._sp));
+    const skipped = uniq(rows.filter((r) => r._spInclude && NON_TAXON.test(r._sp)).map((r) => r._sp));
+    const lr = base.filter((r) => r._side === "L" || r._side === "R");
+    const species = uniq(base.map((r) => r._sp)).sort((a, b) => (ord.get(a) ?? 9999) - (ord.get(b) ?? 9999));
+    const detail = {}, summ = [];
+    for (const sp of species) {
+      const rs = lr.filter((r) => r._sp === sp);
+      const byEl = groupBy(rs, (r) => r._el);
+      const els = [];
+      for (const [el, ers] of byEl) {
+        const info = elementInfo(cfg, el);
+        const row = { 骨骼部位: el, _ri: info.regionIdx, _oi: info.order, 預設: mniDefault(cfg, sp, el),
+          納入: mniEligible(ers[0], cfg, override) };
+        for (const s of ["L", "R"]) {
+          const ss = ers.filter((r) => r._side === s);
+          const zoned = ss.filter((r) => zonesOf(r).length);
+          const sets = zoned.map(zonesOf);
+          let mne = chromatic(sets);
+          if (mne === 0 && ss.length) mne = 1;
+          const zc = {};
+          sets.forEach((st) => st.forEach((z) => (zc[z] = (zc[z] || 0) + 1)));
+          row[s] = { n: ss.length, qty: sum(ss, (r) => r._qty), zoned: zoned.length, unzoned: ss.length - zoned.length, mne,
+            zc, specimens: zoned.map((r, i) => ({ id: r.流水號, zones: sets[i].join("") })) };
+        }
+        row.側別最大 = Math.max(row.L.n, row.R.n);
+        row.區位最大 = Math.max(row.L.mne, row.R.mne);
+        els.push(row);
+      }
+      els.sort((a, b) => a._ri - b._ri || a._oi - b._oi || a.骨骼部位.localeCompare(b.骨骼部位));
+      detail[sp] = els;
+      const use = els.filter((e) => e.納入);
+      const best = (key, sub) => {
+        if (!use.length) return [1, "無可判側別骨骼，以出現計 1"];
+        const m = Math.max(...use.map((e) => e[key]));
+        if (m === 0) return [1, "無可判側別骨骼，以出現計 1"];
+        const basis = [];
+        for (const e of use) for (const s of ["L", "R"]) if (e[s][sub] === m) basis.push(`${e.骨骼部位} ${s}`);
+        return [m, basis.join("、")];
+      };
+      const [sm, sb] = best("側別最大", "n");
+      const [zm, zb] = best("區位最大", "mne");
+      summ.push({ 物種: sp, 側別MNI: sm, 側別依據: sb, 區位MNI: zm, 區位依據: zb });
+    }
+    const ts = sum(summ, (x) => x.側別MNI), tz = sum(summ, (x) => x.區位MNI);
+    summ.forEach((x) => { x.側別百分比 = ts ? x.側別MNI / ts : 0; x.區位百分比 = tz ? x.區位MNI / tz : 0; });
+    return { species: summ, detail, skipped, totalSide: ts, totalZone: tz };
+  }
+
+  // ---------------------------------------------------------------- 骨骼部位
+  function elements(rows, sp) {
+    const rs = rows.filter((r) => r._sp === sp);
+    const total = sum(rs, (r) => r._qty);
+    const g = groupBy(rs, (r) => `${r._el}\u0001${r._side}`);
+    let t = [...g.values()].map((x) => ({ 骨骼區域: x[0]._region, 骨骼部位: x[0]._el, 側別: x[0]._side, 加總: sum(x, (r) => r._qty),
+      _ri: x[0]._regionIdx, _oi: x[0]._elIdx }));
+    t.sort((a, b) => a._ri - b._ri || a._oi - b._oi || a.骨骼部位.localeCompare(b.骨骼部位) || sideIdx(a.側別) - sideIdx(b.側別));
+    const reg = {};
+    t.forEach((x) => (reg[x.骨骼區域] = (reg[x.骨骼區域] || 0) + x.加總));
+    t.forEach((x) => { x.區域百分比 = x.加總 / reg[x.骨骼區域]; x.整體百分比 = total ? x.加總 / total : 0; });
+    const regions = REGION_ORDER.filter((r) => r in reg).concat(Object.keys(reg).filter((r) => !REGION_ORDER.includes(r)))
+      .map((r) => ({ 骨骼區域: r, 加總: reg[r], 整體百分比: total ? reg[r] / total : 0 }));
+    const byEl = groupBy(t, (x) => x.骨骼部位);
+    const noSide = [...byEl.values()].map((xs) => ({ 骨骼區域: xs[0].骨骼區域, 骨骼部位: xs[0].骨骼部位, 加總: sum(xs, (x) => x.加總) }));
+    noSide.forEach((x) => { x.區域百分比 = x.加總 / reg[x.骨骼區域]; x.整體百分比 = total ? x.加總 / total : 0; });
+    // 左右對照（只取有 L／R 的部位）
+    const lr = new Map();
+    for (const x of t) {
+      if (x.側別 !== "L" && x.側別 !== "R") continue;
+      const k = x.骨骼部位;
+      if (!lr.has(k)) lr.set(k, { 骨骼區域: x.骨骼區域, 骨骼部位: k, L: 0, R: 0, _ri: x._ri, _oi: x._oi });
+      lr.get(k)[x.側別] += x.加總;
+    }
+    const sides = [...lr.values()].sort((a, b) => a._ri - b._ri || a._oi - b._oi || a.骨骼部位.localeCompare(b.骨骼部位));
+    const totL = sum(sides, (x) => x.L), totR = sum(sides, (x) => x.R);
+    const regLR = {};
+    sides.forEach((x) => { x.合計 = x.L + x.R; regLR[x.骨骼區域] = (regLR[x.骨骼區域] || 0) + x.合計; });
+    sides.forEach((x) => { x.L百分比 = totL ? x.L / totL : 0; x.R百分比 = totR ? x.R / totR : 0; x.區域百分比 = x.合計 / regLR[x.骨骼區域]; });
+    const nonLR = total - totL - totR;
+    return { table: t, regions, noSide, total, sides, totL, totR, nonLR };
+  }
+
+  // ---------------------------------------------------------------- 性別
+  const SEX_PAT = /\b(female|femal)\b|\bmale\b|雌|雄|(?<![a-zA-Z])公(?![分斤尺克里])|母(?![體岩語])/gi;
+  const CANINE_PAT1 = /canine|tusk|犬齒|獠牙/i, CANINE_PAT2 = /(?<![A-Za-z])d?C(?![a-z])/;
+  const UNCERTAIN_PAT = /[?？]|prob|possib|maybe|perhaps|可能|疑|或/i;
+  const UPPER_PAT = /upper|上顎|上頜|上犬|maxill/i, LOWER_PAT = /lower|下顎|下頜|下犬|mandib/i;
+  const SAME_IND = /同個體|同一個體|same individual/i;
+  const UPPER_BONES = new Set(["maxilla", "premaxilla", "skull", "cranium"]), LOWER_BONES = new Set(["mandible"]);
+  const SEX_ROWS = ["male", "male?", "female", "female?"];
+
+  function jawFrom(cfg, text, bone) {
+    const up = UPPER_PAT.test(text), low = LOWER_PAT.test(text);
+    if (up && !low) return "上顎";
+    if (low && !up) return "下顎";
+    const b = normalizeElement(cfg, bone);
+    if (UPPER_BONES.has(b)) return "上顎";
+    if (LOWER_BONES.has(b)) return "下顎";
+    return "";
+  }
+
+  function sexFromColumn(v) {
+    const s = String(v ?? "").trim();
+    if (!s || s === "-" || /^(n\/?a|un|unknown|indet\.?)$/i.test(s)) return null;
+    const q = /[?？]/.test(s) || /prob|可能|疑/i.test(s);
+    let sx = null;
+    if (/^(f|female|femal|雌|母)/i.test(s.replace(/^(prob\.?|probably)\s*/i, ""))) sx = "female";
+    else if (/^(m|male|雄|公)/i.test(s.replace(/^(prob\.?|probably)\s*/i, ""))) sx = "male";
+    return sx ? sx + (q ? "?" : "") : null;
+  }
+  function analyseSexNote(cfg, note, bone) {
+    const hits = [...note.matchAll(SEX_PAT)].map((m) => m[0]);
+    if (!hits.length) return null;
+    const sexes = uniq(hits.map((h) => (/^fem/i.test(h) || h === "雌" || h === "母" ? "female" : "male")));
+    const sex = sexes.length === 1 ? sexes[0] : "矛盾";
+    let uncertain = false;
+    for (const ch of note.split(/[,，;；\n]/)) {
+      if (!ch.trim()) continue;
+      SEX_PAT.lastIndex = 0;
+      if (new RegExp(SEX_PAT.source, "i").test(ch) && UNCERTAIN_PAT.test(ch)) uncertain = true;
+    }
+    const canine = CANINE_PAT1.test(note) || CANINE_PAT2.test(note);
+    let jaw = jawFrom(cfg, note, bone);
+    if (UPPER_PAT.test(note) && LOWER_PAT.test(note)) jaw = "不明";
+    if (!jaw) jaw = "不明";
+    return { 判定詞: hits.join("、"), 性別: sex + (uncertain && sex !== "矛盾" ? "?" : ""), 犬齒依據: canine ? "是" : "否",
+      上下顎: jaw, 同個體註記: SAME_IND.test(note) ? "是" : "" };
+  }
+
+  /** override: {流水號: {採計:true/false, 性別, 上下顎}} */
+  function sex(rows, cfg, sp, override = {}) {
+    const det = [];
+    for (const r of rows.filter((r) => r._sp === sp)) {
+      let a = analyseSexNote(cfg, String(r.備註 || ""), r.骨骼);
+      const cs = sexFromColumn(r.性別);
+      if (cs) {
+        const ctx = String(r.備註 || "") + " " + String(r.骨骼 || "");
+        if (!a) {
+          const jaw = jawFrom(cfg, String(r.備註 || ""), r.骨骼) || "不明";
+          a = { 判定詞: "", 性別: cs, 犬齒依據: CANINE_PAT1.test(ctx) || CANINE_PAT2.test(ctx) ? "是" : "否", 上下顎: jaw, 同個體註記: SAME_IND.test(String(r.備註 || "")) ? "是" : "" };
+        } else if (a.性別.replace("?", "") !== cs.replace("?", "")) a.性別 = "矛盾";
+        else a.性別 = cs;
+        a.判定詞 = [`性別欄：${r.性別}`, a.判定詞].filter(Boolean).join("、");
+      }
+      if (!a) continue;
+      const auto = a.犬齒依據 === "是" && a.性別 !== "矛盾";
+      const reason = auto ? "" : a.性別 === "矛盾" ? "性別詞互相矛盾" : "未提到犬齒，不採計";
+      const o = override[r.流水號] || {};
+      det.push({ 原表列號: r._列號, 流水號: r.流水號, 骨骼: r.骨骼, 側: r.側, 數量: r.數量, 備註: r.備註, ...a,
+        自動採計: auto, 不採計原因: reason,
+        採計: o.採計 ?? auto, 性別_用: o.性別 || a.性別, 上下顎_用: o.上下顎 || a.上下顎, 已修改: Object.keys(o).length > 0 });
+    }
+    const tab = {};
+    SEX_ROWS.forEach((s) => (tab[s] = { 上顎: 0, 下顎: 0, 不明: 0 }));
+    for (const d of det.filter((d) => d.採計)) {
+      if (!tab[d.性別_用]) tab[d.性別_用] = { 上顎: 0, 下顎: 0, 不明: 0 };
+      const col = d.上下顎_用 === "上顎" || d.上下顎_用 === "下顎" ? d.上下顎_用 : "不明";
+      tab[d.性別_用][col] += 1;
+    }
+    const table = Object.entries(tab).map(([k, v]) => ({ 性別: k, ...v, 合計: v.上顎 + v.下顎 + v.不明 }));
+    return { table, detail: det };
+  }
+
+  // ---------------------------------------------------------------- 年齡
+  const MAIN_TEETH = ["dp4", "P4", "M1", "M2", "M3"];
+  const WEAR_NOTE_A = /\/\s*[a-nuv]\b|\/\s*\d\/\d|"[a-nuv]"|磨耗/, WEAR_NOTE_B = /stage|unerupt|erupt|crypt|wear/i;
+  const isWearNote = (s) => WEAR_NOTE_A.test(s) || WEAR_NOTE_B.test(s);
+
+  function normPos(p) {
+    let s = String(p ?? "").trim();
+    if (!s) return "";
+    s = s.replace(/\s*(or|\/|、)\s*/gi, "/");
+    s = s.replace(/^p\s*m\s*(\d)/i, "P$1");
+    s = s.replace(/^d\s*p\s*(\d)/i, "dP$1");
+    s = s.replace(/^([ipcm])(\d)/i, (m, a, b) => a.toUpperCase() + b);
+    s = s.replace(/\/([ipcm])(\d)/gi, (m, a, b) => "/" + a.toUpperCase() + b);
+    s = s.replace(/^(M\d)\/(\d)$/, "$1/M$2");
+    return s;
+  }
+  const colOfPos = (p) => ({ dP4: "dp4", P4: "P4", M1: "M1", M2: "M2", M3: "M3" })[p] || null;
+  const isNum = (v) => v !== "" && v !== null && v !== undefined && !isNaN(Number(v));
+
+  function collectTeeth(cfg, wide, longs, log) {
+    const recs = [];
+    for (const bone of ["mandible", "tooth", "maxilla"]) {
+      const t = longs[bone];
+      if (!t || !t.length || !("齒位" in t[0])) continue;
+      for (const r of t) {
+        let jaw = { upper: "上顎", lower: "下顎" }[String(r.上下顎 || "").toLowerCase()] || "";
+        if (!jaw) jaw = jawFrom(cfg, "", r.骨骼);
+        recs.push({ 流水號: r.流水號, 骨骼: r.骨骼, 上下顎: jaw, 齒位: normPos(r.齒位), 側別: r.側別 || "",
+          磨耗: String(r.磨耗 || "").trim(), 來源: `長表_${bone}` });
+      }
+    }
+    for (const [pc, sc, wmc] of [["齒位", "stage", "WM"], ["齒位.1", "stage.1", "WM.1"]]) {
+      for (const r of wide) {
+        if (!(pc in r) || r[pc] === "") continue;
+        let stage = String(r[sc] || "").trim();
+        const wm = String(r[wmc] || "").trim();
+        if (!stage && wm && !isNum(wm)) {
+          stage = wm;
+          log.push({ 類型: "磨耗放在 WM 欄", 流水號: r.流水號, 原表列號: r._列號, 內容: `${pc}=${r[pc]}：WM 欄「${wm}」視為磨耗` });
+        }
+        recs.push({ 流水號: r.流水號, 骨骼: r.骨骼, 上下顎: jawFrom(cfg, String(r.備註 || ""), r.骨骼), 齒位: normPos(r[pc]),
+          側別: normalizeSide(r.側), 磨耗: stage, 來源: "原表齒位欄" });
+      }
+    }
+    return recs;
+  }
+
+  function age(rows, cfg, sp, longs) {
+    const log = [];
+    const wide = rows.filter((r) => r._sp === sp);
+    let rec = collectTeeth(cfg, wide, longs, log).filter((r) => r.磨耗 && r.齒位);
+    const seen = new Set();
+    rec = rec.filter((r) => { const k = [r.流水號, r.上下顎, r.齒位, r.側別, r.磨耗, r.來源].join("|"); if (seen.has(k)) return false; seen.add(k); return true; });
+    for (const [, d] of groupBy(rec, (r) => r.流水號)) {
+      const known = uniq(d.map((r) => r.上下顎).filter(Boolean));
+      if (known.length === 1) d.forEach((r) => { if (!r.上下顎) r.上下顎 = known[0]; });
+    }
+    const rowNo = new Map(); for (const r of rows) if (!rowNo.has(r.流水號)) rowNo.set(r.流水號, r._列號);
+    const out = [];
+    for (const [, d] of groupBy(rec, (r) => r.流水號 + "\u0001" + r.上下顎)) {
+      const row = { 流水號: d[0].流水號, 骨骼: uniq(d.map((r) => r.骨骼)).join("、"), 上下顎: d[0].上下顎 };
+      MAIN_TEETH.forEach((c) => (row[c] = ""));
+      const other = [], conflicts = [];
+      for (const [pos, dd] of groupBy(d, (r) => r.齒位)) {
+        const vals = []; const low = new Set();
+        for (const x of dd) if (!low.has(x.磨耗.toLowerCase())) { low.add(x.磨耗.toLowerCase()); vals.push(x.磨耗); }
+        const c = colOfPos(pos);
+        if (c) {
+          row[c] = vals.join("; ");
+          if (vals.length > 1) conflicts.push(`${pos} 有多個磨耗值（${dd.map((x) => `${x.磨耗}[${x.來源}]`).join("、")}）`);
+        } else other.push(`${pos}:${vals.join("/")}`);
+      }
+      row.其他齒位 = other.join("; ");
+      row.側別 = uniq(d.map((r) => r.側別)).filter((s) => s && s !== "-").join("、");
+      row.來源 = uniq(d.map((r) => r.來源)).join("、");
+      row.檢查 = conflicts.join("；");
+      row.原表列號 = rowNo.get(row.流水號) ?? "";
+      out.push(row);
+    }
+    const jo = { 下顎: 0, 上顎: 1, "": 2 };
+    out.sort((a, b) => jo[a.上下顎] - jo[b.上下顎] || String(a.流水號).localeCompare(String(b.流水號)));
+    const got = new Set(rec.map((r) => r.流水號));
+    const jawbones = new Set(["tooth", "mandible", "maxilla", "premaxilla", "skull", "cranium"]);
+    const missing = wide.filter((r) => jawbones.has(normalizeElement(cfg, r.骨骼)) && isWearNote(String(r.備註 || "")) && !got.has(r.流水號))
+      .map((r) => ({ 原表列號: r._列號, 流水號: r.流水號, 骨骼: r.骨骼, 側: r.側, 備註: r.備註 }));
+    return { table: out, records: rec, missing, log };
+  }
+
+  // 磨耗等級排序（Grant 系統）：C → V → E → H → U → a…n；其他依字母
+  const WEAR_ORDER = ["in crypt", "crypt", "cr", "c?", "unerupt", "unerupted", "v", "erupting", "er", "e?", "h", "1/2", "u", "unworn", "no wear",
+    "a", "b", "c", "d", "e", "f", "g", "h1", "j", "k", "l", "m", "n"];
+  function wearRank(w) {
+    let s = String(w).trim();
+    const up = { C: "crypt", V: "v", E: "erupting", H: "h", U: "u" };
+    s = up[s] || s.toLowerCase();
+    const i = WEAR_ORDER.indexOf(s);
+    return i >= 0 ? i : 100;
+  }
+
+
+  // ---------------------------------------------------------------- Lemoine et al. 2014 年齡組
+  // Table 1：0 未萌出；1 齒囊穿孔；2 齒囊中可見；3 齒冠礦化完成；4 萌出穿過骨；5 萌出一半；6 完全萌出無磨耗；
+  //          7–19 = Grant TWS a、b、c、d、e、f、g、h、j、k、l、m、n；S（脫落）以 20 表示
+  // Table 3：各年齡組 dP4、P4、M1、M2、M3 的分數範圍；「上顎/下顎」不同時寫成 "上/下"
+  const LEMOINE = {
+    Specific: {
+      order: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+      ages: { 1: "≤1 mo", 2: "3–5 mos", 3: "6–8 mos", 4: "8–12 mos", 5: "12–16 mos", 6: "18–30 mos", 7: "30–52 mos", 8: "52–72 mos", 9: "72–96 mos", 10: ">96 mos" },
+      t: {
+        1: ["U-7", "U", "U-2", "U", "U"], 2: ["8-10", "U-3", "3-6", "U-2", "U"], 3: ["9-11", "U-3", "7-9", "2-3", "U-2"],
+        4: ["11-S/11-15", "U-7", "9-11", "4-7", "U-3"], 5: ["S", "8-10", "9-12", "7-9", "2-4/2-5"], 6: ["S", "8-11", "10-12", "8-10", "4-8"],
+        7: ["S", "8-12", "13-14", "8-11", "5-9"], 8: ["S", "10-13/9-13", "14-16", "10-13", "7-11"], 9: ["S", "11-14", "15-19", "12-16", "10-12"],
+        10: ["S", "13-14", "18-19", "16-19", "12-15"],
+      },
+    },
+    "Simplified-A": {
+      order: ["A", "B", "C", "D", "E", "F", "G"],
+      ages: { A: "≤1 mo", B: "3–8 mos", C: "8–12 mos", D: "12–16 mos", E: "18–52 mos", F: "52–96 mos", G: ">96 mos" },
+      t: {
+        A: ["U-7", "U", "U-2", "U", "U"], B: ["8-11", "U-3", "3-9", "U-3", "U-2"], C: ["11-S/11-15", "U-7", "9-11", "4-7", "U-3"],
+        D: ["S", "8-10", "9-12", "7-9", "2-4/2-5"], E: ["S", "8-12", "10-14", "8-11", "4-9"], F: ["S", "10-14/9-14", "14-19", "10-16", "7-12"],
+        G: ["S", "13-14", "18-19", "16-19", "12-15"],
+      },
+    },
+    "Simplified-B": {
+      order: ["I", "II", "III", "IV"],
+      ages: { I: "0–12 mos", II: "12–52 mos", III: "52–96 mos", IV: ">96 mos" },
+      t: {
+        I: ["U-S/U-15", "U-7", "U-11", "U-7", "U-3"], II: ["S", "8-12", "9-14", "7-11", "2-9"],
+        III: ["S", "10-14/9-14", "14-19", "10-16", "7-12"], IV: ["S", "13-14", "18-19", "16-19", "12-15"],
+      },
+    },
+  };
+  const LEM_TEETH = ["dp4", "P4", "M1", "M2", "M3"];
+  const SYSTEMS = Object.keys(LEMOINE);
+  const tokScore = (x) => (x === "U" ? 0 : x === "S" ? 20 : parseInt(x, 10));
+  function rangeOf(txt) { const [a, b] = txt.split("-"); return [tokScore(a), tokScore(b ?? a)]; }
+  // 預先解析：LEM[sys].r[cls][tooth] = {上顎:[lo,hi], 下顎:[lo,hi]}
+  for (const sys of SYSTEMS) {
+    const L = LEMOINE[sys]; L.r = {};
+    for (const c of L.order) {
+      L.r[c] = {};
+      L.t[c].forEach((txt, i) => { const [mx, md] = txt.split("/"); L.r[c][LEM_TEETH[i]] = { 上顎: rangeOf(mx), 下顎: rangeOf(md ?? mx) }; });
+    }
+  }
+
+  // 磨耗寫法 → Lemoine 分數（預設判讀；使用者可在網頁修改）
+  const LETTER = { a: 7, b: 8, c: 9, d: 10, e: 11, f: 12, g: 13, h: 14, j: 15, k: 16, l: 17, m: 18, n: 19 };
+  const WORDS = [
+    [/^(u|unworn|unwear|no ?wear|unworn\.?)$/i, "6", "U：完全萌出、無磨耗"],
+    [/^(in ?crypt|crypt|cr|c\?)$/i, "1-3", "齒囊中"],
+    [/^(unerupt|unerupted|not erupted)$/i, "0-3", "未萌出（形成中）"],
+    [/^(erupting|erupt|er|e\?)$/i, "4-5", "萌出中"],
+    [/^(1\/2|½|half|half erupted)$/i, "5", "萌出一半"],
+    [/^little ?\/ ?no wear$/i, "6-7", "幾乎無磨耗", true],
+    [/^(slight|light|little) wear$/i, "7-8", "輕度磨耗（a–b）", true],
+    [/^moderate wear$/i, "10-12", "中度磨耗（d–f）", true],
+    [/^heavy wear$/i, "13-16", "重度磨耗（g–k）", true],
+    [/^in wear$/i, "7-19", "已磨耗（等級不明）", true],
+  ];
+  function parseWearOne(s) {
+    s = s.trim();
+    if (!s) return null;
+    for (const [re, expr, note, flag] of WORDS) if (re.test(s)) return { expr, note, flag: !!flag };
+    if (/^[a-hj-n]$/.test(s)) return { expr: String(LETTER[s]), note: `Grant ${s}` };
+    if (/^[a-hj-n]\d$/.test(s)) return { expr: String(LETTER[s[0]]), note: `Grant ${s[0]}（去掉 ${s[1]}）`, flag: true };
+    const UP = { U: ["6", "U：未磨耗"], V: ["2", "V：齒囊中可見"], C: ["1-3", "C：齒囊中（也可能是磨耗 c）"], E: ["4-5", "E：萌出中（也可能是磨耗 e）"], H: ["5", "H：萌出一半"] };
+    if (UP[s]) return { expr: UP[s][0], note: UP[s][1], flag: s === "C" || s === "E" };
+    if (s === "v") return { expr: "2", note: "v：視為 V（齒囊中可見）", flag: true };
+    if (/^[A-HJ-N]$/.test(s)) return { expr: String(LETTER[s.toLowerCase()]), note: `大寫，視為 Grant ${s.toLowerCase()}`, flag: true };
+    return null;
+  }
+  /** 回傳 {expr, note, flag}；expr 空字串＝無法判讀 */
+  function defaultWearScore(raw) {
+    let s = String(raw ?? "").trim();
+    if (!s) return { expr: "", note: "" };
+    const q = /[?？]$/.test(s); if (q) s = s.replace(/[?？]+$/, "").trim();
+    let r = parseWearOne(s);
+    if (!r) {
+      const m = /^(.+?)\s*[-~–／\/]\s*(.+)$/.exec(s);    // 例：f-g、d-e、cr-v
+      if (m) {
+        const a = parseWearOne(m[1]), b = parseWearOne(m[2]);
+        if (a && b) {
+          const sa = scoresOf(a.expr), sb = scoresOf(b.expr);
+          r = { expr: `${Math.min(...sa, ...sb)}-${Math.max(...sa, ...sb)}`, note: `${a.note} 至 ${b.note}` };
+        }
+      }
+    }
+    if (!r) return { expr: "", note: "無法判讀，請填分數", flag: true };
+    if (q) { r.flag = true; r.note += "（原寫法帶問號）"; }
+    return r;
+  }
+  function scoresOf(expr) {
+    const out = new Set();
+    for (const part of String(expr ?? "").split(/[,，\s]+/).filter(Boolean)) {
+      const m = /^(\d+|U|S)(?:\s*-\s*(\d+|U|S))?\+?$/i.exec(part.trim());
+      if (!m) continue;
+      const a = tokScore(m[1].toUpperCase()), b = m[2] ? tokScore(m[2].toUpperCase()) : a;
+      for (let x = Math.min(a, b); x <= Math.max(a, b); x++) out.add(x);
+    }
+    return [...out];
+  }
+  function toothClasses(sys, tooth, jaw, scores) {
+    const L = LEMOINE[sys];
+    return L.order.filter((c) => {
+      const r = L.r[c][tooth];
+      const rs = jaw === "上顎" ? [r.上顎] : jaw === "下顎" ? [r.下顎] : [r.上顎, r.下顎];
+      return scores.some((x) => rs.some(([lo, hi]) => x >= lo && x <= hi));
+    });
+  }
+  /** 一列（一個流水號＋上下顎）判定年齡組：Lemoine et al. 2014 §3.2，各齒可能組別的眾數（唯一）即為年齡組 */
+  function lemoineAssign(row, sys, scoreOfRaw) {
+    const votes = new Map(), used = [];
+    for (const t of LEM_TEETH) {
+      const vals = String(row[t] || "").split(/;\s*/).filter(Boolean);
+      if (!vals.length) continue;
+      const sc = [...new Set(vals.flatMap((v) => scoresOf(scoreOfRaw(v))))];
+      if (!sc.length) continue;
+      const cls = toothClasses(sys, t, row.上下顎, sc);
+      used.push({ t, cls });
+      cls.forEach((c) => votes.set(c, (votes.get(c) || 0) + 1));
+    }
+    if (!used.length) return { cls: null, note: "無可判讀的齒位" };
+    const order = LEMOINE[sys].order;
+    const max = Math.max(0, ...votes.values());
+    if (!max) return { cls: null, note: "各齒分數不在任何年齡組範圍", used };
+    const top = order.filter((c) => votes.get(c) === max);
+    if (top.length > 1) return { cls: null, note: `可能 ${top.join("/")}`, used };
+    return { cls: top[0], note: max < used.length ? "牙齒間不完全一致（取眾數）" : "", used };
+  }
+  function lemoineSummary(assigned, sys) {
+    const L = LEMOINE[sys];
+    const n = assigned.length;
+    let cum = 0;
+    const rows = L.order.map((c) => {
+      const k = assigned.filter((x) => x === c).length;
+      cum += k;
+      return { 年齡組: c, 年齡估計: L.ages[c], 件數: k, 死亡率: n ? k / n : 0, 存活率: n ? 1 - cum / n : 0 };
+    });
+    return { rows, n };
+  }
+
+  // ---------------------------------------------------------------- 表面痕
+  const MARK_ITEMS = ["切割", "燒炙", "啃咬"];
+  function normMark(v) {
+    let s = String(v ?? "").trim();
+    if (["", "-", "—", "nan"].includes(s)) return "";
+    s = s.replace(/\s*[\r\n]+\s*/g, "+");
+    return s === "v" || s === "V" ? "v" : s;
+  }
+  /** mapping: {原始(已正規化)寫法: 歸入類別}；歸入為空字串 → 視為無紀錄 */
+  function marks(rows, sp, item, mapping = {}) {
+    const rs = rows.filter((r) => r._sp === sp);
+    const raw = new Map();
+    for (const r of rs) {
+      const v = normMark(r[item]);
+      if (!v) continue;
+      const e = raw.get(v) || { 原始寫法: v, 筆數: 0, 數量加總: 0 };
+      e.筆數 += 1; e.數量加總 += r._qty; raw.set(v, e);
+    }
+    const cat = (v) => (v in mapping ? mapping[v] : v);
+    const catTot = new Map();
+    for (const r of rs) { const v = normMark(r[item]); if (!v) continue; const c = cat(v); if (c) catTot.set(c, (catTot.get(c) || 0) + r._qty); }
+    const cols = [...catTot].sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+    const byEl = groupBy(rs, (r) => r._el);
+    const t = [...byEl.values()].map((xs) => {
+      const row = { 骨骼部位: xs[0]._el, _ri: xs[0]._regionIdx, _oi: xs[0]._elIdx };
+      cols.forEach((c) => (row[c] = 0));
+      for (const r of xs) { const v = normMark(r[item]); if (!v) continue; const c = cat(v); if (c) row[c] += r._qty; }
+      row.有紀錄合計 = sum(cols, (c) => row[c]);
+      row.總數 = sum(xs, (r) => r._qty);
+      row.無紀錄 = row.總數 - row.有紀錄合計;
+      row.有紀錄百分比 = row.總數 ? row.有紀錄合計 / row.總數 : 0;
+      return row;
+    });
+    t.sort((a, b) => a._ri - b._ri || a._oi - b._oi || a.骨骼部位.localeCompare(b.骨骼部位));
+    const tot = { 骨骼部位: "合計" };
+    cols.concat(["有紀錄合計", "總數", "無紀錄"]).forEach((c) => (tot[c] = sum(t, (x) => x[c])));
+    tot.有紀錄百分比 = tot.總數 ? tot.有紀錄合計 / tot.總數 : 0;
+    return { table: t, total: tot, cols, rawValues: [...raw.values()].sort((a, b) => b.數量加總 - a.數量加總) };
+  }
+
+  // ---------------------------------------------------------------- 臼齒測量
+  const MOLAR_ITEMS = { M1: ["GL", "WA", "WP"], M2: ["GL", "WA", "WP"], M3: ["GL", "WA", "WM", "WP"] };
+  const ALL_MI = ["GL", "WA", "WM", "WP"];
+  function cleanVal(v) {
+    const s = String(v ?? "").trim();
+    if (["", "-", "—", "x", "X", "NA", "na"].includes(s)) return [null, ""];
+    if (isNum(s)) return [Number(s), ""];
+    const m = /(\d+(?:\.\d+)?)/.exec(s);
+    if (m && !/crad|unworn|^[a-z]$/i.test(s)) return [Number(m[1]), `原值「${s}」`];
+    return [null, `非數值「${s}」略過`];
+  }
+
+  function molars(rows, cfg, sp, longs) {
+    const wide = rows.filter((r) => r._sp === sp);
+    const recs = [];
+    for (const suf of ["", ".1"]) {
+      const pc = "齒位" + suf;
+      for (const r of wide) {
+        if (!(pc in r) || r[pc] === "") continue;
+        const rec = { 流水號: r.流水號, 骨骼: r.骨骼, 上下顎: jawFrom(cfg, String(r.備註 || ""), r.骨骼), 側別: normalizeSide(r.側),
+          齒位: normPos(r[pc]), 磨耗: String(r["stage" + suf] || "").trim(), 來源: "原表齒位欄", 檢查: [],
+          坑號: r.坑號 || "", 層位: r.層位 || "", 文化層: r.文化層 || "", 原表列號: r._列號 };
+        for (const it of ALL_MI) {
+          let [v, note] = cleanVal(r[it + suf]);
+          rec[it] = v;
+          if (note) {
+            if (it === "WM" && !rec.磨耗 && note.startsWith("非數值")) {
+              rec.磨耗 = String(r[it + suf]).trim(); note = `WM 欄「${rec.磨耗}」視為磨耗`;
+            }
+            rec.檢查.push(`${it}：${note}`);
+          }
+        }
+        recs.push(rec);
+      }
+    }
+    const have = new Map(recs.map((r) => [r.流水號 + "|" + r.齒位, r]));
+    const other = [];
+    const ctx = new Map(); for (const r of rows) if (!ctx.has(r.流水號)) ctx.set(r.流水號, r);
+    for (const bone of ["tooth", "mandible", "maxilla"]) {
+      const t = longs[bone];
+      if (!t || !t.length) continue;
+      const rs = t.filter((r) => r.測量項目);
+      for (const [, d] of groupBy(rs, (r) => [r.流水號, r.齒位 || "", r.上下顎 || "", r.側別 || ""].join("\u0001"))) {
+        const r0 = d[0];
+        const pos = normPos(r0.齒位 || "");
+        const meas = {}; d.forEach((x) => (meas[String(x.測量項目).toUpperCase()] = Number(x.測量值)));
+        const std = Object.fromEntries(Object.entries(meas).filter(([k]) => ALL_MI.includes(k)));
+        const oth = Object.entries(meas).filter(([k]) => !ALL_MI.includes(k));
+        const c = ctx.get(r0.流水號) || {};
+        const base = { 流水號: r0.流水號, 骨骼: bone, 上下顎: { upper: "上顎", lower: "下顎" }[String(r0.上下顎 || "").toLowerCase()] || jawFrom(cfg, "", bone),
+          側別: r0.側別 || "", 齒位: pos, 磨耗: uniq(d.map((x) => x.磨耗 || "").filter(Boolean)).join("; "), 來源: `長表_${bone}`,
+          坑號: c.坑號 || "", 層位: c.層位 || "", 文化層: c.文化層 || "", 原表列號: c._列號 ?? "" };
+        if (oth.length && (pos in MOLAR_ITEMS || pos === "" || pos.includes("/") || pos.includes("?")))
+          other.push({ ...base, 測量: oth.map(([k, v]) => `${k}=${v}`).join("、") });
+        if (!Object.keys(std).length) continue;
+        const k = r0.流水號 + "|" + pos;
+        if (have.has(k)) {
+          const ex = have.get(k); const filled = [];
+          for (const [it, v] of Object.entries(std)) {
+            if (isNaN(v)) continue;
+            if (ex[it] === null || ex[it] === undefined) { ex[it] = v; filled.push(`${it}=${v}`); }
+            else if (Math.abs(ex[it] - v) > 0.005) ex.檢查.push(`長表數值不同：${it} 原表=${ex[it]}、長表=${v}`);
+          }
+          if (filled.length) { ex.檢查.push("由長表補入：" + filled.join("、")); ex.來源 = "原表齒位欄＋長表"; }
+          continue;
+        }
+        const rec = { ...base, 檢查: [] };
+        ALL_MI.forEach((it) => (rec[it] = it in std && !isNaN(std[it]) ? std[it] : null));
+        recs.push(rec); have.set(k, rec);
+      }
+    }
+    // 疑似離群
+    for (const pos of Object.keys(MOLAR_ITEMS)) for (const jaw of ["下顎", "上顎"]) for (const it of ALL_MI) {
+      const g = recs.filter((r) => r.齒位 === pos && r.上下顎 === jaw && r[it] !== null && r[it] !== undefined);
+      if (g.length < 5) continue;
+      const v = g.map((r) => r[it]).sort((a, b) => a - b);
+      const med = v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2;
+      for (const r of g) { const ratio = r[it] / med; if (ratio < 0.75 || ratio > 1.25) { r.檢查.push(`${it} 疑似離群（中位數 ${med.toFixed(2)} 的 ${ratio.toFixed(2)} 倍）`); r._outlier = true; } }
+    }
+    recs.forEach((r) => (r.檢查 = r.檢查.join("；")));
+    const jo = { 下顎: 0, 上顎: 1, "": 2 };
+    recs.sort((a, b) => jo[a.上下顎] - jo[b.上下顎] || String(a.流水號).localeCompare(String(b.流水號)));
+    return { records: recs, other };
+  }
+
+  function describe(vals) {
+    const v = vals.filter((x) => x !== null && x !== undefined && !isNaN(x));
+    if (!v.length) return null;
+    const n = v.length, mean = sum(v) / n;
+    const sd = n > 1 ? Math.sqrt(sum(v, (x) => (x - mean) ** 2) / (n - 1)) : null;
+    return { n, 平均: mean, 標準差: sd, 最小: Math.min(...v), 最大: Math.max(...v) };
+  }
+
+  return {
+    parseCSV, fromMatrix, FIELDS, TAXON_LEVELS, detectFields, applyFields, isKnownElement, lookupElement, toCSV, groupBy, sum, uniq, qtyOf, makeConfig, normalizeElement, elementInfo, normalizeSide, zonesOf,
+    defaultSpeciesGroups, groupsFromCSV, groupsToCSV, resolveSpecies, prepare, fauna, mni, mniDefault, chromatic,
+    elements, sex, age, marks, molars, describe, normPos, normMark, wearRank,
+    LEMOINE, SYSTEMS, defaultWearScore, scoresOf, toothClasses, lemoineAssign, lemoineSummary,
+    MAIN_TEETH, MARK_ITEMS, MOLAR_ITEMS, ALL_MI, SEX_ROWS, REGION_ORDER, NON_TAXON, DEFAULT_ELEMENTS, DEFAULT_ALIASES,
+  };
+})();
+if (typeof module !== "undefined") module.exports = Core;
+
+</script>
+<script>
+// ============================================================================
+// 圖表：SVG 繪製（長條、橫條、折線、散點、直方圖）＋ PNG／SVG 匯出
+// ============================================================================
+"use strict";
+const Charts = (() => {
+  const PALETTE = ["#2f6b5e", "#c0763a", "#5b7fa6", "#b5545c", "#8a7a3d", "#7a5c99", "#4f9a8f", "#d4a72c", "#6b6b6b", "#9c6644",
+    "#3d5a80", "#e07a5f"];
+  const FONT = '"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",Arial,sans-serif';
+
+  const DEFAULT_STYLE = {
+    title: "", xLabel: "", yLabel: "", width: 760, height: 440, fontSize: 13,
+    fill: true, fillOpacity: 0.85, strokeColor: "", strokeWidth: 1, lineWidth: 2, pointSize: 5, pointShape: "circle",
+    barGap: 0.25, showGrid: true, showValues: false, legend: "right", colorByCategory: false,
+    colors: {}, binWidth: "", binStart: "", xMin: "", xMax: "", yMin: "", yMax: "", stacked: false, labelAngle: "auto",
+    background: "#ffffff",
+    colorBy: "", patterns: {}, patternSize: 8, patternWidth: 1.2, patternBg: "#ffffff", shapes: {},
+    groupGap: 0.6, showGroups: true,
+  };
+  const PATTERNS = [["", "實心（無圖樣）"], ["diag", "斜線 ／"], ["diag2", "斜線 ＼"], ["cross", "交叉斜線 ╳"], ["horiz", "橫線 ═"],
+    ["vert", "直線 ║"], ["grid", "方格 ╬"], ["dots", "點點 ⠿"], ["dense", "密點"], ["empty", "空白（只有外框）"]];
+  const BW_PATTERNS = ["", "diag", "dots", "cross", "horiz", "diag2", "grid", "vert", "dense", "empty"];
+  const BW_COLORS = ["#222222", "#555555", "#222222", "#333333", "#444444", "#222222", "#555555", "#333333", "#222222", "#222222"];
+  const SHAPES = ["circle", "square", "triangle", "diamond"];
+
+  function patternDef(id, kind, color, st) {
+    const z = Number(st.patternSize) || 8, lw = Number(st.patternWidth) || 1.2;
+    const bg = st.patternBg && st.patternBg !== "none" ? `<rect width="${z}" height="${z}" fill="${st.patternBg}"/>` : "";
+    const line = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${lw}"/>`;
+    let body = "", tr = "";
+    if (kind === "diag" || kind === "diag2" || kind === "cross") {
+      tr = ` patternTransform="rotate(${kind === "diag2" ? -45 : 45})"`;
+      body = line(z / 2, 0, z / 2, z) + (kind === "cross" ? line(0, z / 2, z, z / 2) : "");
+    } else if (kind === "horiz") body = line(0, z / 2, z, z / 2);
+    else if (kind === "vert") body = line(z / 2, 0, z / 2, z);
+    else if (kind === "grid") body = line(z / 2, 0, z / 2, z) + line(0, z / 2, z, z / 2);
+    else if (kind === "dots") body = `<circle cx="${z / 2}" cy="${z / 2}" r="${lw * 1.1}" fill="${color}"/>`;
+    else if (kind === "dense") body = `<circle cx="${z / 4}" cy="${z / 4}" r="${lw * 0.8}" fill="${color}"/><circle cx="${z * 3 / 4}" cy="${z * 3 / 4}" r="${lw * 0.8}" fill="${color}"/>`;
+    else if (kind === "empty") body = "";
+    return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${z}" height="${z}"${tr}>${bg}${body}</pattern>`;
+  }
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const num = (v) => (v === "" || v === null || v === undefined || isNaN(Number(v)) ? null : Number(v));
+
+  function niceTicks(lo, hi, n = 5) {
+    if (lo === hi) { hi = lo + 1; }
+    const span = hi - lo, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+    const err = step0 / mag;
+    const step = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
+    const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step;
+    const t = [];
+    for (let v = a; v <= b + step * 1e-9; v += step) t.push(+v.toFixed(10));
+    return { ticks: t, min: a, max: b, step };
+  }
+  function fmt(v, f) {
+    if (v === null || v === undefined || isNaN(v)) return "";
+    if (f === "pct") return (v * 100).toFixed(Math.abs(v) < 0.1 && v !== 0 ? 2 : 1) + "%";
+    if (f === "int") return Math.round(v).toLocaleString();
+    return Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : +v.toFixed(2) + "";
+  }
+  function tickFmt(v, f, dec) {
+    if (f === "pct") return (v * 100).toFixed(Math.max(0, dec - 2)) + "%";
+    if (f === "int") return Number.isInteger(v) ? v.toLocaleString() : v.toFixed(dec);
+    return v.toFixed(dec);
+  }
+  const textW = (s, fs) => [...String(s)].reduce((a, ch) => a + (ch.charCodeAt(0) > 0x2e80 ? fs : fs * 0.56), 0);
+
+  function colorOf(style, name, i) { return (style.colors && style.colors[name]) || PALETTE[i % PALETTE.length]; }
+  function darker(hex, k = 0.75) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return hex;
+    const n = parseInt(m[1], 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return "#" + [r, g, b].map((x) => Math.round(x * k).toString(16).padStart(2, "0")).join("");
+  }
+
+  /** 計算直方圖分組 */
+  function bins(series, style) {
+    const all = series.flatMap((s) => s.values).filter((v) => v !== null && !isNaN(v));
+    if (!all.length) return { edges: [], counts: series.map(() => []) };
+    let lo = Math.min(...all), hi = Math.max(...all);
+    let w = num(style.binWidth);
+    if (!w || w <= 0) {
+      const k = Math.max(5, Math.ceil(Math.log2(all.length) + 1));
+      w = niceTicks(0, (hi - lo) || 1, k).step;
+    }
+    let start = num(style.binStart);
+    if (start === null || start > lo) start = Math.floor(lo / w) * w;
+    const edges = [];
+    for (let e = start; e <= hi + 1e-9; e += w) edges.push(+e.toFixed(10));
+    edges.push(+(edges[edges.length - 1] + w).toFixed(10));
+    const counts = series.map((s) => {
+      const c = new Array(edges.length - 1).fill(0);
+      for (const v of s.values) {
+        if (v === null || isNaN(v)) continue;
+        let i = Math.floor((v - start) / w + 1e-9); if (i >= c.length) i = c.length - 1; if (i >= 0) c[i]++;
+      }
+      return c;
+    });
+    return { edges, counts, w };
+  }
+
+  /**
+   * spec: {type:'bar'|'hbar'|'line'|'scatter'|'hist', categories, series:[{name, values|points}], valueFormat}
+   * style: DEFAULT_STYLE 的欄位
+   */
+  function render(spec, style0, size) {
+    const st = { ...DEFAULT_STYLE, ...style0 };
+    // 樣式中留空的標題／軸標題，使用資料提供的預設文字
+    for (const k of ["title", "xLabel", "yLabel"]) if (!st[k] && spec[k]) st[k] = spec[k];
+    const W = size ? size.w : st.width, H = size ? size.h : st.height;
+    const fs = Number(st.fontSize) || 13;
+    const type = spec.type;
+    const series = spec.series || [];
+    const multi = series.length > 1;
+    const out = [];
+    const legendItems = [];
+    const uid = "c" + Math.random().toString(36).slice(2, 8);
+    let colorBy = st.colorBy || spec.defaultColorBy || (st.colorByCategory ? "category" : "series");
+    if (colorBy === "group" && !spec.catGroups) colorBy = "series";
+    if ((type === "scatter" || type === "hist" || type === "line") && colorBy !== "series") colorBy = "series";
+
+    // ----- 資料範圍
+    let cats = spec.categories || [];
+    let xIsCat = type === "bar" || type === "line" || type === "hbar";
+    let hist = null;
+    if (type === "hist") { hist = bins(series, st); cats = hist.edges.slice(0, -1); }
+    let yLo = 0, yHi = 1, xLo = 0, xHi = 1;
+    if (xIsCat) {
+      let vals;
+      if (st.stacked && (type === "bar" || type === "hbar")) vals = cats.map((_, i) => series.reduce((a, s) => a + (num(s.values[i]) || 0), 0));
+      else vals = series.flatMap((s) => s.values.map(num)).filter((v) => v !== null);
+      yLo = Math.min(0, ...vals); yHi = Math.max(0, ...vals, 0);
+      if (yHi === yLo) yHi = yLo + 1;
+    } else if (type === "scatter") {
+      const pts = series.flatMap((s) => s.points);
+      const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+      xLo = Math.min(...xs); xHi = Math.max(...xs); yLo = Math.min(...ys); yHi = Math.max(...ys);
+      if (!pts.length) { xLo = 0; xHi = 1; yLo = 0; yHi = 1; }
+      const px = (xHi - xLo) * 0.05 || 1, py = (yHi - yLo) * 0.05 || 1;
+      xLo -= px; xHi += px; yLo -= py; yHi += py;
+    } else if (type === "hist") {
+      xLo = hist.edges[0] ?? 0; xHi = hist.edges[hist.edges.length - 1] ?? 1;
+      yLo = 0;
+      yHi = st.stacked ? Math.max(1, ...cats.map((_, i) => hist.counts.reduce((a, c) => a + c[i], 0)))
+        : Math.max(1, ...hist.counts.flat());
+    }
+    if (spec.yFixed) { yLo = spec.yFixed[0]; yHi = spec.yFixed[1]; }
+    if (num(st.yMin) !== null) yLo = num(st.yMin);
+    if (num(st.yMax) !== null) yHi = num(st.yMax);
+    if (num(st.xMin) !== null) xLo = num(st.xMin);
+    if (num(st.xMax) !== null) xHi = num(st.xMax);
+    const valFmt = spec.valueFormat || "num";
+    const dataHi = yHi;
+    let yT = niceTicks(yLo, yHi, Math.max(3, Math.round((H - 120) / 60)));
+    if (!spec.yFixed && num(st.yMax) === null && yT.max > 0 && dataHi >= yT.max - yT.step * 0.02) yT = niceTicks(yLo, yHi + yT.step * 0.5, Math.max(3, Math.round((H - 120) / 60)));
+    if (num(st.yMin) === null) yLo = Math.min(yLo, yT.min); if (num(st.yMax) === null) yHi = yT.max;
+    const yDec = Math.max(0, -Math.floor(Math.log10(yT.step) + 1e-9));
+    let xT = null;
+    if (type === "scatter" || type === "hist") {
+      xT = niceTicks(xLo, xHi, Math.max(3, Math.round((W - 160) / 80)));
+      if (type === "scatter") { if (num(st.xMin) === null) xLo = xT.min; if (num(st.xMax) === null) xHi = xT.max; }
+    }
+
+    // ----- 上色鍵（系列／分組／類別）與圖樣
+    const keyOf = (sName, c, i) => (colorBy === "group" ? spec.catGroups[i] : colorBy === "category" ? String(c) : sName);
+    const keyList = [];
+    if (colorBy === "series") series.forEach((s) => keyList.push(s.name));
+    else cats.forEach((c, i) => { const k = keyOf("", c, i); if (!keyList.includes(k)) keyList.push(k); });
+    const colorOfKey = (k) => (st.colors && st.colors[k]) || PALETTE[Math.max(0, keyList.indexOf(k)) % PALETTE.length];
+    const defs = [];
+    const fillOf = (k) => {
+      const pat = st.patterns && st.patterns[k];
+      if (!pat) return colorOfKey(k);
+      const id = `${uid}_p${keyList.indexOf(k)}`;
+      if (!defs.some((d) => d.includes(`id="${id}"`))) defs.push(patternDef(id, pat, colorOfKey(k), st));
+      return `url(#${id})`;
+    };
+    const shapeOf = (k) => (st.shapes && st.shapes[k]) || st.pointShape;
+
+    // ----- 版面
+    const showLegend = st.legend !== "none" && keyList.length > 1;
+    if (showLegend) keyList.forEach((k) => legendItems.push({ name: k, color: colorOfKey(k) }));
+    const legW = showLegend && st.legend === "right" ? Math.min(220, Math.max(...legendItems.map((l) => textW(l.name, fs))) + 44) : 0;
+    const legH = showLegend && (st.legend === "top" || st.legend === "bottom") ? fs + 14 : 0;
+    const titleH = st.title ? fs * 1.5 + 10 : 8;
+    const yTickW = Math.max(...yT.ticks.map((t) => textW(tickFmt(t, type === "hist" ? "int" : valFmt, yDec), fs * 0.92))) + 10;
+    let catLabelW = 0, rot = 0;
+    const catLabels = type === "hist" ? [] : cats.map(String);
+    if (type === "hbar") catLabelW = Math.max(0, ...catLabels.map((c) => textW(c, fs * 0.92))) + 10;
+    let left = 14 + (st.yLabel ? fs * 1.4 : 0) + (type === "hbar" ? catLabelW : yTickW);
+    let right = 16 + legW;
+    let plotW = W - left - right;
+    let bottomLab = fs + 12;
+    if (xIsCat && type !== "hbar" && cats.length) {
+      const slot = plotW / cats.length;
+      const maxw = Math.max(...catLabels.map((c) => textW(c, fs * 0.92)));
+      rot = st.labelAngle === "auto" ? (maxw > slot - 4 ? (maxw * 0.5 > slot ? 90 : 45) : 0) : Number(st.labelAngle) || 0;
+      bottomLab = rot ? Math.min(maxw * Math.sin(rot * Math.PI / 180) + fs + 10, H * 0.45) : fs + 12;
+    }
+    if (type === "hbar") bottomLab = fs + 12;
+    // 第一級分組（例如骨骼區域）：類別之間留空隙並在軸外標示組名
+    const grp = (type === "bar" || type === "hbar") && spec.catGroups && st.showGroups !== false ? spec.catGroups : null;
+    const groupH = grp ? fs * 1.7 : 0;
+    if (grp && type === "bar") bottomLab += groupH;
+    if (grp && type === "hbar") { left += groupH; plotW -= groupH; }
+    const top = titleH + (st.legend === "top" ? legH : 0) + 6;
+    const bottom = bottomLab + (st.xLabel ? fs * 1.5 : 0) + (st.legend === "bottom" ? legH : 0) + 6;
+    const plotH = H - top - bottom;
+
+    const yScale = (v) => top + plotH - ((v - yLo) / (yHi - yLo)) * plotH;
+    const xScaleNum = (v) => left + ((v - xLo) / (xHi - xLo)) * plotW;
+
+    out.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="${esc(st.background || "#fff")}"/>`);
+    if (st.title) out.push(`<text x="${W / 2}" y="${fs * 1.25 + 4}" text-anchor="middle" font-size="${fs * 1.2}" font-weight="600">${esc(st.title)}</text>`);
+    out.push(`<defs><clipPath id="${uid}_clip"><rect x="${left}" y="${top}" width="${plotW}" height="${plotH}"/></clipPath></defs>`);
+
+    // ----- 格線與數值軸
+    const valTicks = yT.ticks.filter((t) => t >= yLo - 1e-9 && t <= yHi + 1e-9);
+    if (type === "hbar") {
+      const xs = (v) => left + ((v - yLo) / (yHi - yLo)) * plotW;
+      for (const t of valTicks) {
+        const x = xs(t);
+        if (st.showGrid) out.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${top + plotH}" stroke="#e4e0d8"/>`);
+        out.push(`<text x="${x}" y="${top + plotH + fs + 4}" text-anchor="middle" font-size="${fs * 0.92}" fill="#555">${esc(tickFmt(t, valFmt, yDec))}</text>`);
+      }
+    } else {
+      for (const t of valTicks) {
+        const y = yScale(t);
+        if (st.showGrid) out.push(`<line x1="${left}" y1="${y}" x2="${left + plotW}" y2="${y}" stroke="#e4e0d8"/>`);
+        out.push(`<text x="${left - 6}" y="${y + fs * 0.34}" text-anchor="end" font-size="${fs * 0.92}" fill="#555">${esc(tickFmt(t, type === "hist" ? "int" : valFmt, yDec))}</text>`);
+      }
+    }
+    const xDec = xT ? Math.max(0, -Math.floor(Math.log10(xT.step) + 1e-9)) : 0;
+    if (xT && type === "scatter") {
+      for (const t of xT.ticks.filter((t) => t >= xLo - 1e-9 && t <= xHi + 1e-9)) {
+        const x = xScaleNum(t);
+        if (st.showGrid) out.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${top + plotH}" stroke="#e4e0d8"/>`);
+        out.push(`<text x="${x}" y="${top + plotH + fs + 4}" text-anchor="middle" font-size="${fs * 0.92}" fill="#555">${esc(tickFmt(t, "num", xDec))}</text>`);
+      }
+    }
+
+    const sw = Number(st.strokeWidth) || 0;
+    const fo = st.fill ? Number(st.fillOpacity) : 0;
+    const strokeFor = (c) => (st.strokeColor ? st.strokeColor : darker(c));
+    const valueLabel = (x, y, v, anchor = "middle") =>
+      st.showValues ? `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${fs * 0.82}" fill="#333">${esc(fmt(v, valFmt))}</text>` : "";
+
+    // ----- 繪製
+    if (type === "bar" || type === "hbar") {
+      const n = cats.length;
+      // 位置：每個類別 1 格，分組之間多留 groupGap 格
+      const gap = grp ? Math.max(0, Number(st.groupGap) || 0) : 0;
+      const before = []; let ng = 0;
+      cats.forEach((c, i) => { if (grp && i > 0 && grp[i] !== grp[i - 1]) ng++; before.push(ng); });
+      const units = n + ng * gap;
+      const slot = (type === "hbar" ? plotH : plotW) / Math.max(1, units);
+      const pos = (i) => (i + before[i] * gap) * slot;
+      const inner = slot * (1 - Math.min(0.9, Math.max(0, Number(st.barGap))));
+      const nb = st.stacked ? 1 : series.length;
+      const bw = inner / Math.max(1, nb);
+      const vs = (v) => (type === "hbar" ? left + ((v - yLo) / (yHi - yLo)) * plotW : yScale(v));
+      cats.forEach((c, i) => {
+        let acc = 0;
+        series.forEach((s, j) => {
+          const v = num(s.values[i]); if (v === null) return;
+          const k = keyOf(s.name, c, i);
+          const col = colorOfKey(k);
+          const a = st.stacked ? acc : 0, b = st.stacked ? acc + v : v; acc += st.stacked ? v : 0;
+          const off = (slot - inner) / 2 + (st.stacked ? 0 : j * bw);
+          let x, y, w, h;
+          if (type === "hbar") { y = top + pos(i) + off; h = bw; x = Math.min(vs(a), vs(b)); w = Math.abs(vs(b) - vs(a)); }
+          else { x = left + pos(i) + off; w = bw; y = Math.min(vs(a), vs(b)); h = Math.abs(vs(b) - vs(a)); }
+          const pat = st.patterns && st.patterns[k];
+          const strokeW = pat ? Math.max(sw, 0.8) : sw;
+          out.push(`<rect x="${x}" y="${y}" width="${Math.max(0, w)}" height="${Math.max(0, h)}" fill="${fillOf(k)}" fill-opacity="${fo}" stroke="${strokeW ? strokeFor(col) : "none"}" stroke-width="${strokeW}"><title>${esc(s.name)} ${esc(c)}: ${esc(fmt(v, valFmt))}</title></rect>`);
+          if (!st.stacked) out.push(type === "hbar" ? valueLabel(x + w + 4, y + h / 2 + fs * 0.3, v, "start") : valueLabel(x + w / 2, y - 4, v));
+        });
+        if (st.stacked && st.showValues) out.push(type === "hbar" ? valueLabel(vs(acc) + 4, top + pos(i) + slot / 2 + fs * 0.3, acc, "start") : valueLabel(left + pos(i) + slot / 2, vs(acc) - 4, acc));
+      });
+      // 類別標籤
+      cats.forEach((c, i) => {
+        if (type === "hbar") out.push(`<text x="${left - 6}" y="${top + pos(i) + slot / 2 + fs * 0.32}" text-anchor="end" font-size="${fs * 0.92}">${esc(c)}</text>`);
+        else catLabel(out, left + pos(i) + slot / 2, top + plotH, c, rot, fs);
+      });
+      // 分組標示
+      if (grp) {
+        const spans = [];
+        cats.forEach((c, i) => { if (!spans.length || spans[spans.length - 1].g !== grp[i]) spans.push({ g: grp[i], a: i, b: i }); else spans[spans.length - 1].b = i; });
+        for (const sp of spans) {
+          const p0 = pos(sp.a) + slot * 0.08, p1 = pos(sp.b) + slot * 0.92;
+          if (type === "bar") {
+            const y = top + plotH + bottomLab - groupH + 4;
+            out.push(`<path d="M${left + p0},${y - 4} L${left + p0},${y} L${left + p1},${y} L${left + p1},${y - 4}" fill="none" stroke="#777"/>`);
+            out.push(`<text x="${left + (p0 + p1) / 2}" y="${y + fs * 1.05}" text-anchor="middle" font-size="${fs * 0.95}" font-weight="600">${esc(sp.g)}</text>`);
+          } else {
+            const x = left - catLabelW - 4;
+            out.push(`<path d="M${x + 4},${top + p0} L${x},${top + p0} L${x},${top + p1} L${x + 4},${top + p1}" fill="none" stroke="#777"/>`);
+            out.push(`<text transform="translate(${x - 5},${top + (p0 + p1) / 2}) rotate(-90)" text-anchor="middle" font-size="${fs * 0.95}" font-weight="600">${esc(sp.g)}</text>`);
+          }
+        }
+      }
+    } else if (type === "line") {
+      const n = cats.length, slot = plotW / Math.max(1, n);
+      const xOf = (i) => left + i * slot + slot / 2;
+      series.forEach((s, j) => {
+        const col = colorOfKey(s.name);
+        const pts = s.values.map((v, i) => [xOf(i), num(v)]).filter((p) => p[1] !== null);
+        if (!pts.length) return;
+        if (st.fill && fo > 0) {
+          const base = yScale(Math.max(yLo, 0));
+          const d = `M${pts[0][0]},${base} ` + pts.map((p) => `L${p[0]},${yScale(p[1])}`).join(" ") + ` L${pts[pts.length - 1][0]},${base} Z`;
+          out.push(`<path d="${d}" fill="${fillOf(s.name)}" fill-opacity="${st.patterns && st.patterns[s.name] ? fo : fo * 0.35}" stroke="none"/>`);
+        }
+        const dash = st.dashes && st.dashes[s.name] ? ` stroke-dasharray="${st.dashes[s.name]}"` : "";
+        out.push(`<polyline points="${pts.map((p) => `${p[0]},${yScale(p[1])}`).join(" ")}" fill="none" stroke="${col}" stroke-width="${st.lineWidth}"${dash}/>`);
+        for (const [x, v] of pts) {
+          out.push(marker(x, yScale(v), { ...st, pointShape: shapeOf(s.name) }, col, `${s.name}: ${fmt(v, valFmt)}`));
+          out.push(valueLabel(x, yScale(v) - 7, v));
+        }
+      });
+      cats.forEach((c, i) => catLabel(out, xOf(i), top + plotH, c, rot, fs));
+    } else if (type === "scatter") {
+      out.push(`<g clip-path="url(#${uid}_clip)">`);
+      series.forEach((s, j) => {
+        const col = colorOfKey(s.name);
+        for (const p of s.points) out.push(marker(xScaleNum(p.x), yScale(p.y), { ...st, pointShape: shapeOf(s.name) }, col, `${p.label ? p.label + " " : ""}(${fmt(p.x)}, ${fmt(p.y)})`));
+      });
+      out.push(`</g>`);
+    } else if (type === "hist") {
+      const xs = (v) => left + ((v - xLo) / (xHi - xLo)) * plotW;
+      const stackAcc = new Array(cats.length).fill(0);
+      series.forEach((s, j) => {
+        const col = colorOfKey(s.name);
+        const hpat = st.patterns && st.patterns[s.name];
+        hist.counts[j].forEach((c, i) => {
+          if (!c) return;
+          const a = st.stacked ? stackAcc[i] : 0, b = a + c; if (st.stacked) stackAcc[i] = b;
+          const x0 = xs(hist.edges[i]), x1 = xs(hist.edges[i + 1]);
+          out.push(`<rect x="${x0}" y="${yScale(b)}" width="${Math.max(0, x1 - x0)}" height="${Math.max(0, yScale(a) - yScale(b))}" fill="${fillOf(s.name)}" fill-opacity="${fo}" stroke="${sw || hpat ? strokeFor(col) : "none"}" stroke-width="${hpat ? Math.max(sw, 0.8) : sw}"><title>${esc(s.name)} ${fmt(hist.edges[i])}–${fmt(hist.edges[i + 1])}: ${c}</title></rect>`);
+          if (!st.stacked) out.push(st.showValues ? `<text x="${(x0 + x1) / 2}" y="${yScale(b) - 4}" text-anchor="middle" font-size="${fs * 0.8}">${c}</text>` : "");
+        });
+      });
+      const step = hist.edges.length > 16 ? Math.ceil(hist.edges.length / 12) : 1;
+      hist.edges.forEach((e, i) => {
+        if (i % step) return;
+        out.push(`<text x="${xs(e)}" y="${top + plotH + fs + 4}" text-anchor="middle" font-size="${fs * 0.92}" fill="#555">${esc(tickFmt(e, "num", Math.max(0, -Math.floor(Math.log10(hist.w) + 1e-9))))}</text>`);
+      });
+    }
+
+    // 軸線
+    out.push(`<line x1="${left}" y1="${top + plotH}" x2="${left + plotW}" y2="${top + plotH}" stroke="#555"/>`);
+    out.push(`<line x1="${left}" y1="${top}" x2="${left}" y2="${top + plotH}" stroke="#555"/>`);
+    // 軸標題
+    if (st.xLabel) out.push(`<text x="${left + plotW / 2}" y="${top + plotH + bottomLab + fs * 1.2}" text-anchor="middle" font-size="${fs}">${esc(st.xLabel)}</text>`);
+    if (st.yLabel) out.push(`<text transform="translate(${14 + fs * 0.6},${top + plotH / 2}) rotate(-90)" text-anchor="middle" font-size="${fs}">${esc(st.yLabel)}</text>`);
+    // 圖例
+    if (showLegend && legendItems.length) {
+      const sq = fs * 0.85;
+      const item = (l) => (type === "scatter" || type === "line")
+        ? (type === "line" ? `<line x1="${-sq * 0.4}" y1="${-sq * 0.35}" x2="${sq * 1.4}" y2="${-sq * 0.35}" stroke="${l.color}" stroke-width="${st.lineWidth}"${st.dashes && st.dashes[l.name] ? ` stroke-dasharray="${st.dashes[l.name]}"` : ""}/>` : "")
+          + marker(sq / 2, -sq * 0.35, { ...st, pointShape: shapeOf(l.name), pointSize: Math.min(st.pointSize, sq / 1.6) }, l.color, "")
+        : `<rect x="0" y="${-sq + 2}" width="${sq * 1.3}" height="${sq}" fill="${fillOf(l.name)}" fill-opacity="${Math.max(fo, 0.15)}" stroke="${strokeFor(l.color)}" stroke-width="${Math.max(sw, 0.8)}"/>`;
+      if (st.legend === "right") {
+        const x = W - legW + 10;
+        legendItems.forEach((l, i) => out.push(`<g transform="translate(${x},${top + 8 + i * (fs + 8) + fs})">${item(l)}<text x="${type === "line" ? sq * 1.4 + 6 : sq * 1.3 + 6}" y="0" font-size="${fs * 0.92}">${esc(l.name)}</text></g>`));
+      } else {
+        const y = st.legend === "top" ? titleH + fs : H - 8;
+        let total = legendItems.reduce((a, l) => a + textW(l.name, fs * 0.92) + sq + 22, 0);
+        let x = Math.max(8, (W - total) / 2);
+        for (const l of legendItems) {
+          out.push(`<g transform="translate(${x},${y})">${item(l)}<text x="${sq * 1.4 + 6}" y="0" font-size="${fs * 0.92}">${esc(l.name)}</text></g>`);
+          x += textW(l.name, fs * 0.92) + sq * 1.4 + 26;
+        }
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family='${FONT}' fill="#24211d"><defs>${defs.join("")}</defs>${out.join("")}</svg>`;
+  }
+
+  function catLabel(out, x, y, c, rot, fs) {
+    if (!rot) out.push(`<text x="${x}" y="${y + fs + 4}" text-anchor="middle" font-size="${fs * 0.92}">${esc(c)}</text>`);
+    else out.push(`<text transform="translate(${x + fs * 0.3},${y + 8}) rotate(${-rot})" text-anchor="end" font-size="${fs * 0.92}">${esc(c)}</text>`);
+  }
+
+  function marker(x, y, st, col, title) {
+    const r = Number(st.pointSize) || 4;
+    const fo = st.fill ? Number(st.fillOpacity) : 0;
+    const stroke = st.strokeColor || darker(col);
+    const sw = Math.max(Number(st.strokeWidth) || 0, st.fill ? 0 : 1.2);
+    const t = title ? `<title>${esc(title)}</title>` : "";
+    const common = `fill="${col}" fill-opacity="${fo}" stroke="${sw ? stroke : "none"}" stroke-width="${sw}"`;
+    if (st.pointShape === "square") return `<rect x="${x - r}" y="${y - r}" width="${2 * r}" height="${2 * r}" ${common}>${t}</rect>`;
+    if (st.pointShape === "triangle") return `<path d="M${x},${y - r * 1.15} L${x + r},${y + r * 0.75} L${x - r},${y + r * 0.75} Z" ${common}>${t}</path>`;
+    if (st.pointShape === "diamond") return `<path d="M${x},${y - r * 1.2} L${x + r},${y} L${x},${y + r * 1.2} L${x - r},${y} Z" ${common}>${t}</path>`;
+    return `<circle cx="${x}" cy="${y}" r="${r}" ${common}>${t}</circle>`;
+  }
+
+  // ---------------------------------------------------------------- 匯出
+  const CRC_TABLE = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(bytes) { let c = 0xffffffff; for (const b of bytes) c = CRC_TABLE[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+
+  /** 在 PNG 中加入 pHYs（DPI）資訊，讓 Word／排版軟體以正確尺寸置入 */
+  function setPngDpi(buf, dpi) {
+    const src = new Uint8Array(buf);
+    const ppm = Math.round(dpi / 0.0254);
+    const chunk = new Uint8Array(21);
+    const dv = new DataView(chunk.buffer);
+    dv.setUint32(0, 9);
+    chunk.set([0x70, 0x48, 0x59, 0x73], 4);
+    dv.setUint32(8, ppm); dv.setUint32(12, ppm); chunk[16] = 1;
+    dv.setUint32(17, crc32(chunk.subarray(4, 17)));
+    const out = new Uint8Array(src.length + 21);
+    out.set(src.subarray(0, 33), 0); out.set(chunk, 33); out.set(src.subarray(33), 54);
+    return out;
+  }
+
+  /** opts: {mode:'px'|'cm', w, h, scale, dpi}；回傳 Promise<Blob> */
+  async function toPNG(spec, style, opts) {
+    let lw, lh, scale, dpi;
+    if (opts.mode === "cm") {
+      dpi = Number(opts.dpi) || 300;
+      lw = Math.round(opts.w / 2.54 * 96); lh = Math.round(opts.h / 2.54 * 96); scale = dpi / 96;
+    } else {
+      lw = Math.round(opts.w); lh = Math.round(opts.h); scale = Number(opts.scale) || 1; dpi = 96 * scale;
+    }
+    const svg = render(spec, style, { w: lw, h: lh });
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(lw * scale); cv.height = Math.round(lh * scale);
+    const ctx = cv.getContext("2d");
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    const blob = await new Promise((res) => cv.toBlob(res, "image/png"));
+    const withDpi = setPngDpi(await blob.arrayBuffer(), dpi);
+    return { blob: new Blob([withDpi], { type: "image/png" }), px: [cv.width, cv.height] };
+  }
+  function toSVG(spec, style) { return new Blob([render(spec, style)], { type: "image/svg+xml;charset=utf-8" }); }
+
+  /** 圖中實際用到的上色鍵（給樣式面板產生顏色／圖樣選項） */
+  function keysOf(spec, st) {
+    let colorBy = st.colorBy || spec.defaultColorBy || (st.colorByCategory ? "category" : "series");
+    if (colorBy === "group" && !spec.catGroups) colorBy = "series";
+    if (["scatter", "hist", "line"].includes(spec.type)) colorBy = "series";
+    const keys = [];
+    if (colorBy === "series") (spec.series || []).forEach((s) => keys.push(s.name));
+    else (spec.categories || []).forEach((c, i) => { const k = colorBy === "group" ? spec.catGroups[i] : String(c); if (!keys.includes(k)) keys.push(k); });
+    return { keys, colorBy };
+  }
+  return { render, toPNG, toSVG, keysOf, DEFAULT_STYLE, PALETTE, PATTERNS, BW_PATTERNS, BW_COLORS, SHAPES, niceTicks, bins };
+})();
+if (typeof module !== "undefined") module.exports = Charts;
+
+</script>
+<script>
+// ============================================================================
+// 介面
+// ============================================================================
+"use strict";
+const APP_VERSION = "1.0.0（2026-10-30）";
+const $ = (id) => document.getElementById(id);
+const escH = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function h(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "style" && typeof v === "object") Object.assign(e.style, v);
+    else if (v === true) e.setAttribute(k, "");
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) e.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return e;
+}
+const fmtPct = (v) => (v === null || v === undefined || isNaN(v) ? "" : (v * 100).toFixed(2) + "%");
+const fmtNum = (v, d = 2) => (v === null || v === undefined || v === "" || isNaN(v) ? "" : Number.isInteger(v) ? String(v) : Number(v).toFixed(d));
+const today = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`; };
+const safeName = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "_");
+
+// ---------------------------------------------------------------- 檔案系統
+function decodeBytes(buf) {
+  let t = new TextDecoder("utf-8").decode(buf);
+  const bad = (t.match(/�/g) || []).length;
+  if (bad > 5) { try { t = new TextDecoder("big5").decode(buf); } catch (e) { /* keep */ } }
+  return t;
+}
+const splitPath = (p) => String(p || "").split("/").filter(Boolean);
+
+class DirFS {
+  constructor(handle) { this.h = handle; this.writable = true; this.name = handle.name; }
+  async _dir(parts, create = false) { let d = this.h; for (const p of parts) d = await d.getDirectoryHandle(p, { create }); return d; }
+  async list(path) {
+    try { const d = await this._dir(splitPath(path)); const out = [];
+      for await (const [name, hd] of d.entries()) out.push({ name, kind: hd.kind, size: hd.kind === "file" ? (await hd.getFile()).size : 0 });
+      return out; } catch (e) { return null; }
+  }
+  async file(path) {
+    try { const ps = splitPath(path); const d = await this._dir(ps.slice(0, -1)); return await (await d.getFileHandle(ps[ps.length - 1])).getFile(); }
+    catch (e) { return null; }
+  }
+  async readText(path) { const f = await this.file(path); return f ? decodeBytes(await f.arrayBuffer()) : null; }
+  async write(path, data) {
+    const ps = splitPath(path); const d = await this._dir(ps.slice(0, -1), true);
+    const fh = await d.getFileHandle(ps[ps.length - 1], { create: true });
+    const w = await fh.createWritable(); await w.write(data); await w.close();
+  }
+}
+class ListFS {      // <input webkitdirectory>：唯讀
+  constructor(files) {
+    this.writable = false; this.files = new Map();
+    for (const f of files) {
+      if (f.webkitRelativePath) { const ps = splitPath(f.webkitRelativePath); this.name = ps[0]; this.files.set(ps.slice(1).join("/"), f); }
+      else { this.name = "選取的檔案"; this.files.set(f.name, f); }   // 平板：直接選檔
+    }
+  }
+  async list(path) {
+    const pre = splitPath(path).join("/"); const out = new Map();
+    for (const [p, f] of this.files) {
+      if (pre && !p.startsWith(pre + "/")) continue;
+      const rest = splitPath(pre ? p.slice(pre.length + 1) : p);
+      if (!rest.length) continue;
+      if (rest.length === 1) out.set(rest[0], { name: rest[0], kind: "file", size: f.size });
+      else if (!out.has(rest[0])) out.set(rest[0], { name: rest[0], kind: "directory", size: 0 });
+    }
+    return out.size || !pre ? [...out.values()] : null;
+  }
+  async file(path) { return this.files.get(splitPath(path).join("/")) || null; }
+  async readText(path) { const f = await this.file(path); return f ? decodeBytes(await f.arrayBuffer()) : null; }
+  async write() { throw new Error("唯讀"); }
+}
+class MemFS {       // 測試用：{路徑: 文字}
+  constructor(obj, name = "mem") { this.writable = true; this.data = new Map(Object.entries(obj)); this.name = name; this.written = {}; }
+  async list(path) { return ListFS.prototype.list.call({ files: new Map([...this.data].map(([p, t]) => [p, { size: t.size ?? t.length }])) }, path); }
+  async file(path) { const t = this.data.get(splitPath(path).join("/")); return t === undefined ? null : t instanceof Blob ? t : new Blob([t]); }
+  async readText(path) { const t = this.data.get(splitPath(path).join("/")); return t === undefined ? null : t; }
+  async write(path, data) { this.written[path] = data; this.data.set(splitPath(path).join("/"), typeof data === "string" ? data : "[blob]"); }
+}
+
+// ---------------------------------------------------------------- 狀態
+const S = {
+  fs: null, sites: [], site: null, csvName: null, header: [], rows: [], view: [], cfg: null, groups: [], log: [],
+  parsedDir: null, folderIndex: null, longCache: {}, dirty: false, tab: "fauna",
+  settings: null,
+};
+const blankSettings = () => ({ version: 1, filterCols: [], filters: {}, mniOverride: {}, markMap: {}, wearMap: {}, sexOverride: {}, molarExclude: {}, charts: {}, ui: {} });
+const sitePath = (p) => [S.site, p].filter(Boolean).join("/");
+const resultsPath = (p) => sitePath("分析結果/" + p);
+const ui = (tab) => (S.settings.ui[tab] ||= {});
+
+function markDirty() { S.dirty = true; $("saveBtn").classList.add("dirty"); $("saveStatus").textContent = "設定已變更，尚未儲存"; }
+window.addEventListener("beforeunload", (e) => { if (S.dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+// ---------------------------------------------------------------- 瀏覽器內保存（唯讀／平板模式）
+const LS = {
+  key: () => `za:${S.fs ? S.fs.name : ""}/${S.site}/${S.csvName}${S.sheet ? "#" + S.sheet : ""}`,
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+};
+async function saveFile(rel, data, filename) {
+  // rel：相對於遺址「分析結果」資料夾
+  if (S.fs && S.fs.writable) {
+    try { await S.fs.write(resultsPath(rel), data); return `已存到 ${S.site ? S.site + "/" : ""}分析結果/${rel}`; }
+    catch (e) { console.warn(e); }
+  }
+  const blob = data instanceof Blob ? data : new Blob([data], { type: "text/plain;charset=utf-8" });
+  const a = h("a", { href: URL.createObjectURL(blob), download: filename || rel.split("/").pop() });
+  document.body.append(a); a.click(); a.remove();
+  return `已下載 ${filename || rel.split("/").pop()}`;
+}
+function toast(msg) {
+  const t = h("div", { style: { position: "fixed", right: "18px", bottom: "18px", background: "#2f6b5e", color: "#fff", padding: "8px 14px", borderRadius: "8px", zIndex: 99, boxShadow: "0 4px 14px rgba(0,0,0,.2)", fontSize: "13.5px" } }, msg);
+  document.body.append(t); setTimeout(() => t.remove(), 3200);
+}
+
+// ---------------------------------------------------------------- 載入
+$("pickDir").onclick = async () => {
+  if (!window.showDirectoryPicker) { $("pickFallback").click(); return; }
+  try { const hd = await window.showDirectoryPicker({ mode: "readwrite" }); await openRoot(new DirFS(hd)); }
+  catch (e) { if (e.name !== "AbortError") alert("無法開啟資料夾：" + e.message); }
+};
+$("pickFallback").onchange = async (e) => { if (e.target.files.length) await openRoot(new ListFS(e.target.files)); };
+$("pickFiles").onchange = async (e) => { if (e.target.files.length) await openRoot(new ListFS(e.target.files)); };
+// 平板或不支援資料夾存取的瀏覽器：提示改用選檔
+if (!window.showDirectoryPicker) $("pickHint").style.display = "";
+// 以網站方式開啟時註冊離線快取（直接開 html 檔時略過）
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+const DATA_EXT = /\.(csv|xlsx)$/i;
+async function openRoot(fs) {
+  S.fs = fs;
+  const top = (await fs.list("")) || [];
+  const sites = [];
+  if (top.some((x) => x.kind === "file" && DATA_EXT.test(x.name))) sites.push({ path: "", label: `（${fs.name} 本身）` });
+  for (const d of top.filter((x) => x.kind === "directory" && !["程式", "分析結果"].includes(x.name)).sort((a, b) => a.name.localeCompare(b.name))) {
+    const ls = (await fs.list(d.name)) || [];
+    if (ls.some((x) => x.kind === "file" && DATA_EXT.test(x.name))) sites.push({ path: d.name, label: d.name });
+  }
+  S.sites = sites;
+  $("rootStatus").innerHTML = `已選擇 <b>${escH(fs.name)}</b>${fs.writable ? "" : "（唯讀：設定存在這台裝置的瀏覽器中，圖檔與表格改為下載）"}；找到 ${sites.length} 個含清單（csv／xlsx）的遺址資料夾`;
+  $("siteSel").innerHTML = sites.map((s, i) => `<option value="${i}">${escH(s.label)}</option>`).join("");
+  $("siteRow").style.display = sites.length ? "flex" : "none";
+  if (sites.length) await refreshCsvList();
+}
+$("siteSel").onchange = refreshCsvList;
+async function refreshCsvList() {
+  const s = S.sites[$("siteSel").value];
+  const ls = ((await S.fs.list(s.path)) || []).filter((x) => x.kind === "file" && DATA_EXT.test(x.name) && !x.name.startsWith("~$")).sort((a, b) => b.size - a.size);
+  $("csvSel").innerHTML = ls.map((x) => `<option>${escH(x.name)}</option>`).join("");
+  await refreshSheets();
+}
+$("csvSel").onchange = refreshSheets;
+S.wbCache = {};
+async function workbook(path) {
+  if (S.wbCache[path]) return S.wbCache[path];
+  const f = await S.fs.file(path);
+  return (S.wbCache[path] = await Xlsx.readXlsx(await f.arrayBuffer()));
+}
+async function refreshSheets() {
+  const s = S.sites[$("siteSel").value], name = $("csvSel").value;
+  if (!/\.xlsx$/i.test(name || "")) { $("sheetCtl").style.display = "none"; return; }
+  $("sheetCtl").style.display = "";
+  $("sheetSel").innerHTML = "<option>讀取中…</option>";
+  try {
+    const wb = await workbook([s.path, name].filter(Boolean).join("/"));
+    // 預設：偵測到最多標準欄位的工作表
+    let best = wb.sheetNames[0], bestN = -1;
+    for (const n of wb.sheetNames) {
+      const hdr = Core.fromMatrix((await wb.readSheet(n)).slice(0, 5)).header;
+      const d = Core.detectFields(hdr); const k = Object.values(d).filter(Boolean).length + (d.物種 && d.骨骼 ? 10 : 0);
+      if (k > bestN) { bestN = k; best = n; }
+    }
+    $("sheetSel").innerHTML = wb.sheetNames.map((n) => `<option ${n === best ? "selected" : ""}>${escH(n)}</option>`).join("");
+  } catch (e) { $("sheetSel").innerHTML = ""; alert("無法讀取 xlsx：" + e.message); }
+}
+$("loadBtn").onclick = async () => {
+  if (S.dirty && !confirm("目前的設定尚未儲存，確定要重新載入？")) return;
+  await loadSite(S.sites[$("siteSel").value].path, $("csvSel").value, $("sheetCtl").style.display === "none" ? null : $("sheetSel").value);
+};
+
+async function readTable(site, name, sheet) {
+  const path = [site, name].filter(Boolean).join("/");
+  if (/\.xlsx$/i.test(name)) {
+    const wb = await workbook(path);
+    return Core.fromMatrix(await wb.readSheet(sheet || wb.sheetNames[0]));
+  }
+  return Core.parseCSV(await S.fs.readText(path));
+}
+
+// ---------------------------------------------------------------- 欄位對照對話框
+function fieldDialog(header, rows, map) {
+  return new Promise((resolve) => {
+    const dlg = $("fieldDlg"), body = $("fieldBody");
+    const cur = { ...map };
+    const sample = (col) => {
+      if (!col) return "";
+      const vals = []; for (const r of rows) { const v = r[col]; if (v && !vals.includes(v)) vals.push(v); if (vals.length >= 5) break; }
+      return vals.join("、");
+    };
+    const trs = Core.FIELDS.map((f) => {
+      const smp = h("span", { class: "muted small" }, sample(cur[f.k]));
+      const sel = h("select", { onchange: (e) => { cur[f.k] = e.target.value; smp.textContent = sample(cur[f.k]); } },
+        [h("option", { value: "" }, "（沒有）"), ...header.map((c) => h("option", { value: c, selected: cur[f.k] === c }, c))]);
+      return h("tr", {}, h("td", {}, h("b", {}, f.k), f.req ? h("span", { style: { color: "var(--bad)" } }, " *") : ""), h("td", {}, sel), h("td", { class: "wrap" }, smp));
+    });
+    body.innerHTML = "";
+    body.append(h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "標準欄位"), h("th", {}, "清單中的欄位"), h("th", {}, "內容範例"))), h("tbody", {}, trs)));
+    $("fieldMsg").textContent = "";
+    $("fieldOk").onclick = () => {
+      const miss = Core.FIELDS.filter((f) => f.req && !cur[f.k]).map((f) => f.k);
+      if (miss.length) { $("fieldMsg").textContent = "必要欄位未指定：" + miss.join("、"); return; }
+      dlg.close(); resolve(cur);
+    };
+    $("fieldCancel").onclick = () => { dlg.close(); resolve(null); };
+    dlg.showModal();
+  });
+}
+
+// ---------------------------------------------------------------- 認不得的名稱
+function unknownNames() {
+  const bones = new Map(), sides = new Map();
+  for (const r of S.rows) {
+    const b = String(r.骨骼 ?? "").replace(/\s+/g, " ").trim();
+    if (b && !Core.isKnownElement(S.cfg, b)) {
+      const e = bones.get(b) || { n: 0, sp: new Map() }; e.n++; e.sp.set(r.物種, (e.sp.get(r.物種) || 0) + 1); bones.set(b, e);
+    }
+    const sv = String(r.側 ?? "").trim();
+    if (sv && !["L", "R", "Ax", "-", "UN"].includes(Core.normalizeSide(sv, S.cfg))) sides.set(sv, (sides.get(sv) || 0) + 1);
+  }
+  return { bones: [...bones].sort((a, b) => b[1].n - a[1].n), sides: [...sides].sort((a, b) => b[1] - a[1]) };
+}
+function unknownDialog() {
+  return new Promise((resolve) => {
+    const unk = unknownNames();
+    if (!unk.bones.length && !unk.sides.length) { resolve(false); return; }
+    const dlg = $("unkDlg"), body = $("unkBody");
+    const regions = Core.REGION_ORDER;
+    const byRegion = Core.groupBy(S.cfg.elements, (e) => e.骨骼區域);
+    const boneSel = (raw) => h("select", { "data-raw": raw },
+      h("optgroup", { label: "新增為獨立部位" }, regions.map((rg) => h("option", { value: "new:" + rg, selected: rg === "其他" }, `新增：${rg}${rg === "其他" ? "（只計數）" : ""}`))),
+      ...regions.filter((rg) => byRegion.has(rg)).map((rg) => h("optgroup", { label: `歸入既有部位（${rg}）` },
+        byRegion.get(rg).map((e) => h("option", { value: "to:" + e.標準名稱 }, `歸入 ${e.標準名稱}`)))));
+    const sideSel = (raw) => h("select", { "data-side": raw }, [["UN", "UN（不明）"], ["L", "L"], ["R", "R"], ["Ax", "Ax（中軸）"], ["-", "-（未記錄）"]].map(([v, l]) => h("option", { value: v }, l)));
+    body.innerHTML = "";
+    if (unk.bones.length) body.append(h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "骨骼寫法"), h("th", { class: "num" }, "筆數"), h("th", {}, "常見物種"), h("th", {}, "處理方式"))),
+      h("tbody", {}, unk.bones.map(([raw, e]) => h("tr", {}, h("td", {}, raw), h("td", { class: "num" }, String(e.n)),
+        h("td", { class: "small" }, [...e.sp].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k}(${n})`).join("、")), h("td", {}, boneSel(raw)))))));
+    if (unk.sides.length) body.append(h("table", { style: { marginTop: "10px" } }, h("thead", {}, h("tr", {}, h("th", {}, "側別寫法"), h("th", { class: "num" }, "筆數"), h("th", {}, "歸入"))),
+      h("tbody", {}, unk.sides.map(([raw, n]) => h("tr", {}, h("td", {}, raw), h("td", { class: "num" }, String(n)), h("td", {}, sideSel(raw)))))));
+    $("unkLater").onclick = () => { dlg.close(); resolve(false); };
+    $("unkOk").onclick = async () => {
+      const els = S.cfg.elements.map((e) => ({ 標準名稱: e.標準名稱, 別名: e.別名 || "", 骨骼區域: e.骨骼區域, 部位順序: e.部位順序, 側別MNI: e.側別MNI }));
+      for (const sel of body.querySelectorAll("select[data-raw]")) {
+        const raw = sel.dataset.raw, v = sel.value;
+        if (v.startsWith("to:")) { const e = els.find((x) => x.標準名稱 === v.slice(3)); e.別名 = [e.別名, raw].filter(Boolean).join(";"); }
+        else {
+          const rg = v.slice(4);
+          const ord = Math.max(0, ...els.filter((x) => x.骨骼區域 === rg).map((x) => Number(x.部位順序) || 0)) + 1;
+          els.push({ 標準名稱: raw, 別名: "", 骨骼區域: rg, 部位順序: ord, 側別MNI: "N" });
+        }
+      }
+      S.elementsCSV = Core.toCSV(["標準名稱", "別名", "骨骼區域", "部位順序", "側別MNI"], els).replace(/^﻿/, "");
+      const sideRows = Object.entries(S.sideExtra || {}).map(([k, v]) => ({ 原始寫法: k, 歸入: v }));
+      for (const sel of body.querySelectorAll("select[data-side]")) sideRows.push({ 原始寫法: sel.dataset.side, 歸入: sel.value });
+      S.sideExtra = Object.fromEntries(sideRows.map((x) => [x.原始寫法, x.歸入]));
+      S.sidesCSV = Core.toCSV(["原始寫法", "歸入"], sideRows).replace(/^﻿/, "");
+      S.cfg = Core.makeConfig(S.elementsCSV, S.aliasesCSV, S.sidesCSV);
+      const msgs = [];
+      LS.set("za:config:elements", S.elementsCSV); LS.set("za:config:sides", S.sidesCSV);
+      if (!(S.fs.writable && S.site !== "")) { toast("對照已存在這台裝置的瀏覽器中"); dlg.close(); resolve(true); return; }
+      for (const [path, text] of [["程式/設定/骨骼分類.csv", S.elementsCSV], ["程式/設定/側別對照.csv", S.sidesCSV]]) {
+        if (S.fs.writable && S.site !== "") { try { await S.fs.write(path, text); msgs.push("已寫入 " + path); continue; } catch (e) { console.warn(e); } }
+        const a = h("a", { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: path.split("/").pop() }); document.body.append(a); a.click(); a.remove();
+        msgs.push("已下載 " + path.split("/").pop() + "（請放到 程式/設定/）");
+      }
+      toast(msgs.join("；"));
+      dlg.close(); resolve(true);
+    };
+    dlg.showModal();
+  });
+}
+
+async function loadSite(site, csvName, sheet = null) {
+  const fs = S.fs;
+  S.site = site; S.csvName = csvName; S.sheet = sheet; S.longCache = {}; S.dirty = false;
+  $("loadStatus").textContent = "讀取中…";
+  const parsed = await readTable(site, csvName, sheet);
+  S.header = parsed.header; S.rows = parsed.rows;
+  // 欄位對照
+  const fmText = await fs.readText(resultsPath("欄位對照.csv"));
+  let saved = {}; if (fmText) for (const x of Core.parseCSV(fmText).rows) saved[x.標準欄位] = x.原始欄位;
+  else if (!fs.writable) { const ls0 = LS.get(LS.key()); if (ls0 && ls0.fieldMap) saved = ls0.fieldMap; }
+  let fmap = Core.detectFields(S.header, saved);
+  const missing = Core.FIELDS.filter((f) => f.req && !fmap[f.k]);
+  if (missing.length || S.forceFieldDlg) {
+    S.forceFieldDlg = false;
+    const m = await fieldDialog(S.header, S.rows, fmap);
+    if (!m) { $("loadStatus").textContent = "已取消載入"; return; }
+    fmap = m;
+    const txt = Core.toCSV(["標準欄位", "原始欄位"], Object.entries(fmap).map(([k, v]) => ({ 標準欄位: k, 原始欄位: v })));
+    try { await saveFile("欄位對照.csv", txt, "欄位對照.csv"); } catch (e) { console.warn(e); }
+  }
+  S.fieldMap = fmap;
+  Core.applyFields(S.rows, fmap);
+  if (!fmap.數量) for (const r of S.rows) r.數量 = "1";
+  // 設定檔
+  S.elementsCSV = (site !== "" ? await fs.readText("程式/設定/骨骼分類.csv") : null) || LS.get("za:config:elements");
+  S.aliasesCSV = (site !== "" ? await fs.readText("程式/設定/物種別名.csv") : null) || LS.get("za:config:aliases");
+  S.sidesCSV = (site !== "" ? await fs.readText("程式/設定/側別對照.csv") : null) || LS.get("za:config:sides");
+  S.sideExtra = {}; if (S.sidesCSV) for (const x of Core.parseCSV(S.sidesCSV).rows) S.sideExtra[x.原始寫法] = x.歸入;
+  S.cfg = Core.makeConfig(S.elementsCSV, S.aliasesCSV, S.sidesCSV);
+  const lsSaved = !fs.writable ? LS.get(LS.key()) : null;
+  const smText = (await fs.readText(resultsPath("物種對照表.csv"))) || (lsSaved && lsSaved.groupsCSV) || null;
+  const r = Core.defaultSpeciesGroups(S.rows, smText ? Core.groupsFromCSV(smText) : null);
+  S.groups = r.groups;
+  S.settings = blankSettings();
+  const js = await fs.readText(resultsPath("網頁工具設定.json"));
+  if (js) { try { Object.assign(S.settings, JSON.parse(js)); } catch (e) { console.warn(e); } }
+  else if (lsSaved && lsSaved.settings) Object.assign(S.settings, lsSaved.settings);
+  const mniCSV = await fs.readText(resultsPath("MNI部位設定.csv"));
+  if (mniCSV) {
+    S.settings.mniOverride = {};
+    for (const x of Core.parseCSV(mniCSV).rows) (S.settings.mniOverride[x.物種] ||= {})[x.骨骼部位] = String(x.納入).toUpperCase() === "Y";
+  }
+  const mkCSV = await fs.readText(resultsPath("表面痕歸類.csv"));
+  if (mkCSV) {
+    S.settings.markMap = {};
+    for (const x of Core.parseCSV(mkCSV).rows) (S.settings.markMap[x.項目] ||= {})[x.原始寫法] = x.歸入;
+  }
+  const wmCSV = await fs.readText(resultsPath("磨耗對照.csv"));
+  if (wmCSV) { S.settings.wearMap = {}; for (const x of Core.parseCSV(wmCSV).rows) S.settings.wearMap[x.原始寫法] = x.Lemoine分數; }
+  S.settings.filterCols = (S.settings.filterCols || []).filter((c) => S.header.includes(c));
+  if (!S.settings.filterCols.length && fmap.文化層) S.settings.filterCols = [fmap.文化層];
+  // 測量值解析工具輸出
+  const ls = (await fs.list(site)) || [];
+  const pd = ls.filter((x) => x.kind === "directory" && /測量長表/.test(x.name)).map((x) => x.name).sort();
+  S.parsedDir = pd.length ? pd[pd.length - 1] : null;
+  S.folderIndex = null;
+  if (S.parsedDir) {
+    const idx = await fs.readText(sitePath(S.parsedDir + "/物種資料夾一覽.csv"));
+    if (idx) S.folderIndex = Core.parseCSV(idx).rows;
+  }
+  // 認不得的骨骼／側別：立即處理
+  if (!S.skipUnknownDlg) await unknownDialog();
+  reprepare();
+  const msgs = [`<b>${S.rows.length.toLocaleString()}</b> 筆紀錄${sheet ? `（工作表：${escH(sheet)}）` : ""}`];
+  const mapped = Object.entries(fmap).filter(([k, v]) => v && v !== k).map(([k, v]) => `${escH(v)}→${k}`);
+  if (mapped.length) msgs.push("欄位：" + mapped.join("、"));
+  msgs.push(smText ? "已讀入物種對照表" : "物種對照表：自動產生（大小寫合併）");
+  if (r.added.length && smText) msgs.push(`新物種名稱 ${r.added.length} 個已補入`);
+  const loose = ls.filter((x) => x.kind === "file" && /_長表_(mandible|tooth|maxilla)\.csv$/i.test(x.name)).length;
+  msgs.push(S.parsedDir ? `長表：${escH(S.parsedDir)}` : loose ? `長表：直接選取的 ${loose} 個檔案` : "無測量值解析輸出（年齡、臼齒只用原表齒位欄）");
+  $("loadStatus").innerHTML = msgs.join("　·　");
+  renderLoadTools();
+  $("app").style.display = "block";
+  $("saveBtn").classList.remove("dirty"); $("saveStatus").textContent = S.fs.writable ? "" : "唯讀模式：設定會存在這台裝置的瀏覽器中（可另外下載備份）";
+  buildFilters(); buildTabs(); renderTab();
+}
+function renderLoadTools() {
+  const unk = unknownNames();
+  const box = $("loadTools"); box.innerHTML = ""; box.style.display = "flex";
+  box.append(
+    h("button", { class: "mini", onclick: async () => {
+      const m = await fieldDialog(S.header, S.rows, S.fieldMap); if (!m) return;
+      await saveFile("欄位對照.csv", Core.toCSV(["標準欄位", "原始欄位"], Object.entries(m).map(([k, v]) => ({ 標準欄位: k, 原始欄位: v }))), "欄位對照.csv");
+      S.skipUnknownDlg = false; await loadSite(S.site, S.csvName, S.sheet);
+    } }, "欄位對照…"),
+    h("button", { class: "mini", disabled: !unk.bones.length && !unk.sides.length, onclick: async () => { if (await unknownDialog()) { reprepare(); renderLoadTools(); renderTab(); } } },
+      unk.bones.length || unk.sides.length ? `處理認不得的名稱（骨骼 ${unk.bones.length}、側別 ${unk.sides.length}）` : "骨骼與側別名稱皆已對照"));
+}
+
+function reprepare() { S.log = Core.prepare(S.rows, S.cfg, S.groups); applyFilters(); }
+
+// ---------------------------------------------------------------- 篩選
+function applyFilters() {
+  const f = S.settings.filters;
+  S.view = S.rows.filter((r) => S.settings.filterCols.every((c) => !(f[c] || []).includes(r[c] ?? "")));
+  const st = $("filterStatus");
+  if (st) st.innerHTML = S.view.length === S.rows.length ? `使用全部 <b>${S.rows.length}</b> 筆` : `使用 <b>${S.view.length}</b> / ${S.rows.length} 筆`;
+}
+function buildFilters() {
+  const box = $("filters"); box.innerHTML = "";
+  for (const col of S.settings.filterCols) {
+    const counts = new Map();
+    for (const r of S.rows) { const v = r[col] ?? ""; counts.set(v, (counts.get(v) || 0) + 1); }
+    const excl = new Set(S.settings.filters[col] || []);
+    const vals = [...counts].sort((a, b) => String(a[0]).localeCompare(String(b[0]), "zh-Hant"));
+    const list = h("div", { class: "vals" }, vals.map(([v, n]) => h("label", {},
+      h("input", { type: "checkbox", checked: !excl.has(v), onchange: (e) => {
+        const s = new Set(S.settings.filters[col] || []); e.target.checked ? s.delete(v) : s.add(v);
+        S.settings.filters[col] = [...s]; markDirty(); applyFilters(); renderTab();
+      } }), h("span", {}, v === "" ? "（空白）" : v), h("span", { class: "cnt" }, n))));
+    const setAll = (on) => { S.settings.filters[col] = on ? [] : vals.map((x) => x[0]); markDirty(); applyFilters(); buildFilters(); renderTab(); };
+    box.append(h("div", { class: "filter" },
+      h("div", { class: "fhead" }, h("b", {}, col), h("span", {},
+        h("button", { class: "mini", onclick: () => setAll(true) }, "全選"), " ",
+        h("button", { class: "mini", onclick: () => setAll(false) }, "全不選"), " ",
+        h("button", { class: "mini", title: "移除此篩選", onclick: () => { S.settings.filterCols = S.settings.filterCols.filter((c) => c !== col); delete S.settings.filters[col]; markDirty(); applyFilters(); buildFilters(); renderTab(); } }, "×"))),
+      list));
+  }
+  const sel = $("addFilterSel");
+  const skip = new Set(["流水號", "原代號", "備註", "數量", "GL", "WA", "WP", "WM", "1", "2", "3", "4", "5", "6", "7", "8"]);
+  sel.innerHTML = `<option value="">＋ 新增篩選欄位…</option>` + S.header.filter((c) => !S.settings.filterCols.includes(c) && !skip.has(c) && !/\.\d+$/.test(c))
+    .map((c) => `<option>${escH(c)}</option>`).join("");
+  sel.onchange = () => { if (sel.value) { S.settings.filterCols.push(sel.value); markDirty(); buildFilters(); } };
+  applyFilters();
+}
+
+// ---------------------------------------------------------------- 儲存設定
+$("saveBtn").onclick = async () => {
+  const out = [];
+  out.push(["物種對照表.csv", Core.groupsToCSV(S.groups)]);
+  const mrows = [];
+  for (const [sp, m] of Object.entries(S.settings.mniOverride)) for (const [el, v] of Object.entries(m)) mrows.push({ 物種: sp, 骨骼部位: el, 納入: v ? "Y" : "N" });
+  out.push(["MNI部位設定.csv", Core.toCSV(["物種", "骨骼部位", "納入"], mrows)]);
+  const krows = [];
+  for (const [it, m] of Object.entries(S.settings.markMap)) for (const [raw, cat] of Object.entries(m)) krows.push({ 項目: it, 原始寫法: raw, 歸入: cat });
+  out.push(["表面痕歸類.csv", Core.toCSV(["項目", "原始寫法", "歸入"], krows)]);
+  const wrows = Object.entries(S.settings.wearMap || {}).map(([raw, sc]) => ({ 原始寫法: raw, Lemoine分數: sc }));
+  out.push(["磨耗對照.csv", Core.toCSV(["原始寫法", "Lemoine分數"], wrows)]);
+  out.push(["網頁工具設定.json", JSON.stringify(S.settings, null, 1)]);
+  const msgs = [];
+  if (!S.fs.writable) {
+    // 平板／唯讀：設定存在這台裝置的瀏覽器裡，下次選同一個檔案會自動套用；同時提供下載備份
+    const ok = LS.set(LS.key(), { settings: S.settings, groupsCSV: Core.groupsToCSV(S.groups), fieldMap: S.fieldMap, savedAt: Date.now() });
+    S.dirty = false; $("saveBtn").classList.remove("dirty");
+    $("saveStatus").innerHTML = ok ? `已存在這台裝置的瀏覽器中（${new Date().toLocaleTimeString()}）。` : "瀏覽器不允許儲存（可能是私密瀏覽）。";
+    $("saveStatus").append(h("button", { class: "mini", style: { marginTop: "4px" }, onclick: async () => { for (const [name, text] of out) await saveFile(name, text, name); } }, "下載設定檔備份"));
+    return;
+  }
+  for (const [name, text] of out) msgs.push(await saveFile(name, text, name));
+  S.dirty = false; $("saveBtn").classList.remove("dirty");
+  $("saveStatus").textContent = S.fs.writable ? `已儲存（${new Date().toLocaleTimeString()}）：物種對照表、MNI部位設定、表面痕歸類、磨耗對照、網頁工具設定` : "已下載 5 個設定檔，請放到遺址的「分析結果」資料夾";
+};
+
+// ---------------------------------------------------------------- 表格
+const WRAP_COLS = new Set(["備註", "檢查", "側別依據", "區位依據", "zones", "內容", "測量"]);
+/** cols: [{k,label,f:'int'|'pct'|'num'|fn, num:bool, render:(row)=>Node}] */
+function makeTable(cols, rows, opts = {}) {
+  const thead = h("thead", {}, h("tr", {}, cols.map((c) => h("th", { class: c.num || ["int", "pct", "num"].includes(c.f) ? "num" : "" }, c.label ?? c.k))));
+  const cell = (c, r) => {
+    if (c.render) return c.render(r);
+    const v = r[c.k];
+    if (typeof c.f === "function") return c.f(v, r);
+    if (c.f === "pct") return fmtPct(v);
+    if (c.f === "int") return v === null || v === undefined || v === "" ? "" : String(Math.round(v));
+    if (c.f === "num") return fmtNum(v);
+    return v ?? "";
+  };
+  const tr = (r, cls) => {
+    const row = h("tr", { class: [cls, opts.rowClass ? opts.rowClass(r) : "", opts.onClick ? "click" : ""].filter(Boolean).join(" "),
+      onclick: opts.onClick ? (e) => { if (!["INPUT", "SELECT", "BUTTON"].includes(e.target.tagName)) opts.onClick(r); } : null },
+    cols.map((c) => { const v = cell(c, r); return h("td", { class: [c.num || ["int", "pct", "num"].includes(c.f) ? "num" : "", WRAP_COLS.has(c.k) ? "wrap" : "", c.cls ? c.cls(r) : ""].join(" ") }, v); }));
+    return row;
+  };
+  const tbody = h("tbody", {}, rows.map((r) => tr(r)), opts.total ? tr(opts.total, "total") : null);
+  const tbl = h("table", {}, thead, tbody);
+  const textOf = () => {
+    const lines = [cols.map((c) => c.label ?? c.k).join("\t")];
+    for (const r of rows.concat(opts.total ? [opts.total] : [])) lines.push(cols.map((c) => {
+      if (c.text) return c.text(r);
+      const v = cell(c, r); return v instanceof Node ? v.textContent : String(v).replace(/\t|\n/g, " ");
+    }).join("\t"));
+    return lines;
+  };
+  const bar = h("div", { class: "tbar" },
+    opts.title ? h("b", { style: { marginRight: "auto" } }, opts.title) : null,
+    h("button", { class: "mini", onclick: async () => { await navigator.clipboard.writeText(textOf().join("\n")); toast("已複製，可直接貼到試算表"); } }, "複製表格"),
+    h("button", { class: "mini", onclick: async () => {
+      const lines = textOf().map((l) => l.split("\t"));
+      const csv = Core.toCSV(lines[0], lines.slice(1));
+      const name = `${safeName(opts.name || "表格")}.csv`;
+      toast(await saveFile("表格/" + name, csv, name));
+    } }, "匯出 CSV"));
+  return h("div", {}, bar, h("div", { class: "tablewrap", style: opts.maxHeight ? { maxHeight: opts.maxHeight } : null }, tbl));
+}
+
+// ---------------------------------------------------------------- 圖表卡片
+const TYPE_LABEL = { bar: "長條圖", hbar: "橫條圖", line: "折線圖", scatter: "散點圖", hist: "直方圖" };
+/**
+ * key：設定中保存樣式的名稱；specFn(type, style) 回傳 spec；opts.types 可用圖型；opts.defaults 預設樣式
+ */
+function chartCard(key, specFn, opts = {}) {
+  const types = opts.types || ["bar", "hbar"];
+  const saved = S.settings.charts[key];
+  const st = S.settings.charts[key] = Object.assign({}, Charts.DEFAULT_STYLE, { type: types[0] }, opts.defaults || {}, saved || {});
+  for (const k of ["colors", "patterns", "shapes", "dashes"]) st[k] = { ...(st[k] || {}) };
+  if (!types.includes(st.type)) st.type = types[0];
+  const box = h("div", { class: "chartbox" });
+  const panel = h("div", { class: "stylepanel" });
+  let spec = null, lastNames = "";
+  const draw = () => {
+    spec = specFn(st.type, st);
+    box.innerHTML = Charts.render(spec, st);
+    const names = seriesNames().join("\u0001");
+    if (names !== lastNames) { lastNames = names; buildColors(); }
+  };
+  const seriesNames = () => Charts.keysOf(spec, st).keys;
+  const colorsBox = h("div", { class: "colors3" });
+  const PAT_OPTS = Charts.PATTERNS, SHAPE_OPTS = [["", "（同上方設定）"], ["circle", "● 圓"], ["square", "■ 方"], ["triangle", "▲ 三角"], ["diamond", "◆ 菱形"]];
+  const DASH_OPTS = [["", "實線"], ["6 4", "虛線"], ["2 3", "點線"], ["10 4 2 4", "點虛線"]];
+  const buildColors = () => {
+    colorsBox.innerHTML = "";
+    const t = st.type;
+    seriesNames().forEach((n, i) => {
+      const cur = st.colors[n] || Charts.PALETTE[i % Charts.PALETTE.length];
+      const ctl = [];
+      if (t === "scatter" || t === "line") ctl.push(h("select", { title: "點形狀", onchange: (e) => { if (e.target.value) st.shapes[n] = e.target.value; else delete st.shapes[n]; markDirty(); draw(); } },
+        SHAPE_OPTS.map(([v, l]) => h("option", { value: v, selected: (st.shapes[n] || "") === v }, l))));
+      if (t === "line") ctl.push(h("select", { title: "線條樣式", onchange: (e) => { if (e.target.value) st.dashes[n] = e.target.value; else delete st.dashes[n]; markDirty(); draw(); } },
+        DASH_OPTS.map(([v, l]) => h("option", { value: v, selected: (st.dashes[n] || "") === v }, l))));
+      if (t !== "scatter") ctl.push(h("select", { title: "填滿圖樣（黑白印刷用）", onchange: (e) => { if (e.target.value) st.patterns[n] = e.target.value; else delete st.patterns[n]; markDirty(); draw(); } },
+        PAT_OPTS.map(([v, l]) => h("option", { value: v, selected: (st.patterns[n] || "") === v }, l))));
+      colorsBox.append(h("div", { class: "crow" },
+        h("input", { type: "color", value: cur, oninput: (e) => { st.colors[n] = e.target.value; markDirty(); draw(); } }),
+        h("span", { class: "small cname", title: n }, n), h("div", { class: "cctl" }, ctl)));
+    });
+  };
+  const bwStyle = () => {
+    const keys = seriesNames(), t = st.type;
+    keys.forEach((n, i) => {
+      if (t === "scatter" || t === "line") {
+        st.colors[n] = ["#111111", "#555555", "#888888", "#333333"][i % 4];
+        st.shapes[n] = Charts.SHAPES[i % Charts.SHAPES.length];
+        if (t === "line") { const d = ["", "6 4", "2 3", "10 4 2 4"][i % 4]; if (d) st.dashes[n] = d; else delete st.dashes[n]; }
+      } else {
+        st.colors[n] = Charts.BW_COLORS[i % Charts.BW_COLORS.length];
+        const p = Charts.BW_PATTERNS[i % Charts.BW_PATTERNS.length]; if (p) st.patterns[n] = p; else delete st.patterns[n];
+      }
+    });
+    if (t === "scatter") { st.fill = false; }
+    else { st.fill = true; st.fillOpacity = 1; if (!Number(st.strokeWidth)) st.strokeWidth = 1; }
+    st.strokeColor = "#111111"; st.showGrid = false;
+    markDirty(); buildPanel(); draw();
+  };
+  const field = (label, input, show = true) => (show ? h("div", { class: "f" }, h("span", {}, label), input) : null);
+  const txt = (k) => h("input", { type: "text", value: st[k] ?? "", placeholder: (spec && spec[k]) || "", oninput: (e) => { st[k] = e.target.value; markDirty(); draw(); } });
+  const numIn = (k, step = 1, w = 70) => h("input", { type: "number", step, value: st[k] ?? "", style: { width: w + "px" }, oninput: (e) => { st[k] = e.target.value === "" ? "" : e.target.value; markDirty(); draw(); } });
+  const chk = (k, label) => h("label", { class: "small" }, h("input", { type: "checkbox", checked: !!st[k], onchange: (e) => { st[k] = e.target.checked; markDirty(); draw(); } }), " " + label);
+  const range = (k, min, max, step) => {
+    const out = h("span", { class: "small" }, String(st[k]));
+    return h("span", { class: "row", style: { flexWrap: "nowrap" } }, h("input", { type: "range", min, max, step, value: st[k], oninput: (e) => { st[k] = Number(e.target.value); out.textContent = e.target.value; markDirty(); draw(); } }), out);
+  };
+  const sel = (k, options) => h("select", { onchange: (e) => { st[k] = e.target.value; markDirty(); buildPanel(); draw(); } },
+    options.map(([v, l]) => h("option", { value: v, selected: String(st[k]) === String(v) }, l)));
+  const buildPanel = () => {
+    const t = st.type;
+    const isBar = t === "bar" || t === "hbar";
+    panel.innerHTML = "";
+    const parts = [
+      field("圖型", sel("type", types.map((x) => [x, TYPE_LABEL[x]]))),
+      opts.extra ? opts.extra(st, () => { markDirty(); draw(); }) : null,
+      h("div", { class: "sec" },
+        field("標題", txt("title")), field("X 軸標題", txt("xLabel")), field("Y 軸標題", txt("yLabel")),
+        field("寬 × 高", h("span", {}, numIn("width", 10, 64), " × ", numIn("height", 10, 64))),
+        field("字級", numIn("fontSize", 1, 56))),
+      h("div", { class: "sec" }, h("div", { class: "small", style: { marginBottom: "4px" } }, t === "scatter" ? "顏色與點形狀" : "顏色與填滿圖樣"),
+        isBar ? field("上色依據", sel("colorBy", [["", "預設"], ["series", "系列"], ...(spec && spec.catGroups ? [["group", "第一級分組"]] : []), ["category", "每個類別"]])) : null,
+        colorsBox,
+        h("div", { class: "row", style: { marginTop: "6px" } },
+          h("button", { class: "mini", onclick: bwStyle, title: "黑／灰色＋不同圖樣（點形狀、線條），適合黑白印刷" }, "黑白印刷樣式"),
+          h("button", { class: "mini", onclick: () => { st.colors = {}; st.patterns = {}; st.shapes = {}; st.dashes = {}; markDirty(); buildPanel(); draw(); } }, "恢復預設配色")),
+        t !== "scatter" ? field("圖樣大小", numIn("patternSize", 1, 56)) : null,
+        t !== "scatter" ? field("圖樣線寬", numIn("patternWidth", 0.2, 56)) : null,
+        t !== "scatter" ? field("圖樣底色", h("span", { class: "row", style: { flexWrap: "nowrap" } },
+          h("input", { type: "color", value: st.patternBg && st.patternBg !== "none" ? st.patternBg : "#ffffff", oninput: (e) => { st.patternBg = e.target.value; markDirty(); draw(); } }),
+          h("button", { class: "mini", onclick: () => { st.patternBg = "none"; markDirty(); draw(); } }, "透明"))) : null),
+      h("div", { class: "sec" },
+        h("div", {}, chk("fill", t === "line" ? "線下填色" : "填滿")),
+        field("透明度", range("fillOpacity", 0, 1, 0.05)),
+        field("外框顏色", h("span", { class: "row", style: { flexWrap: "nowrap" } },
+          h("input", { type: "color", value: st.strokeColor || "#333333", oninput: (e) => { st.strokeColor = e.target.value; markDirty(); draw(); } }),
+          h("button", { class: "mini", onclick: () => { st.strokeColor = ""; markDirty(); draw(); } }, "自動"))),
+        field("外框粗細", numIn("strokeWidth", 0.5, 56)),
+        field("線寬", numIn("lineWidth", 0.5, 56), t === "line"),
+        field("點大小", numIn("pointSize", 0.5, 56), t === "scatter" || t === "line"),
+        field("點形狀", sel("pointShape", [["circle", "圓"], ["square", "方"], ["triangle", "三角"], ["diamond", "菱形"]]), t === "scatter" || t === "line"),
+        field("條間距", range("barGap", 0, 0.9, 0.05), isBar),
+        field("分組間距", range("groupGap", 0, 2, 0.1), isBar && spec && spec.catGroups),
+        isBar && spec && spec.catGroups ? h("div", {}, chk("showGroups", "顯示第一級分組")) : null,
+        isBar || t === "hist" ? h("div", {}, chk("stacked", "堆疊")) : null,
+        field("組距", numIn("binWidth", 0.1), t === "hist"),
+        field("起點", numIn("binStart", 0.1), t === "hist")),
+      h("div", { class: "sec" },
+        field("Y 範圍", h("span", {}, numIn("yMin", "any", 56), " – ", numIn("yMax", "any", 56))),
+        field("X 範圍", h("span", {}, numIn("xMin", "any", 56), " – ", numIn("xMax", "any", 56)), t === "scatter" || t === "hist"),
+        field("標籤角度", sel("labelAngle", [["auto", "自動"], ["0", "水平"], ["45", "45°"], ["90", "90°"]]), t === "bar" || t === "line"),
+        field("圖例", sel("legend", [["right", "右側"], ["top", "上方"], ["bottom", "下方"], ["none", "不顯示"]])),
+        h("div", {}, chk("showValues", "顯示數值"), " ", chk("showGrid", "格線")),
+        field("背景", h("span", { class: "row", style: { flexWrap: "nowrap" } },
+          h("input", { type: "color", value: st.background || "#ffffff", oninput: (e) => { st.background = e.target.value; markDirty(); draw(); } }),
+          h("button", { class: "mini", onclick: () => { st.background = "#ffffff"; markDirty(); buildPanel(); draw(); } }, "白色")))),
+      h("div", { class: "sec row" },
+        h("button", { class: "primary mini", onclick: () => openExport(spec, st, key) }, "匯出圖檔…"),
+        h("button", { class: "mini", onclick: () => { const keepType = st.type; Object.keys(st).forEach((k) => delete st[k]); Object.assign(st, Charts.DEFAULT_STYLE, { type: keepType }, opts.defaults || {}, { type: keepType }); markDirty(); buildPanel(); draw(); } }, "重設樣式"))];
+    panel.append(...parts.filter(Boolean));
+    buildColors();
+  };
+  draw(); buildPanel();
+  const card = h("div", { class: "chartcard" }, box, panel);
+  card.redraw = () => { draw(); };
+  return card;
+}
+
+// PNG／SVG 匯出對話框
+let EXP = null;
+function openExport(spec, st, key) {
+  EXP = { spec, st };
+  const dlg = $("pngDlg");
+  const mode = () => document.querySelector("input[name=pmode]:checked").value;
+  const setUnits = () => {
+    const m = mode();
+    $("pWu").textContent = m === "cm" ? "cm" : "px"; $("pHu").textContent = m === "cm" ? "cm" : "px";
+    $("pDpiRow").style.display = m === "cm" ? "" : "none"; $("pScaleRow").style.display = m === "cm" ? "none" : "";
+    if (m === "cm") { $("pW").value = 16; $("pH").value = +(16 * st.height / st.width).toFixed(1); $("pW").step = 0.1; }
+    else { $("pW").value = st.width; $("pH").value = st.height; $("pW").step = 10; }
+    info();
+  };
+  const info = () => {
+    const m = mode(); const w = Number($("pW").value), hh = Number($("pH").value);
+    const px = m === "cm" ? [Math.round(w / 2.54 * $("pDpi").value), Math.round(hh / 2.54 * $("pDpi").value)] : [Math.round(w * $("pScale").value), Math.round(hh * $("pScale").value)];
+    $("pInfo").textContent = document.querySelector("input[name=pfmt]:checked").value === "svg" ? "SVG 為向量圖，不受解析度限制（版面依上面的尺寸）。" : `輸出 ${px[0]} × ${px[1]} 像素`;
+  };
+  document.querySelectorAll("input[name=pmode]").forEach((r) => (r.onchange = setUnits));
+  document.querySelectorAll("input[name=pfmt]").forEach((r) => (r.onchange = info));
+  ["pW", "pH", "pDpi", "pScale"].forEach((id) => ($(id).oninput = info));
+  $("pName").value = `${safeName(S.site || "data")}_${safeName(st.title || key)}_${today()}`;
+  setUnits();
+  $("pCancel").onclick = () => dlg.close();
+  $("pGo").onclick = async () => {
+    const m = mode(), fmt = document.querySelector("input[name=pfmt]:checked").value;
+    const w = Number($("pW").value), hh = Number($("pH").value);
+    const name = safeName($("pName").value || "chart");
+    let msg;
+    if (fmt === "svg") {
+      const lw = m === "cm" ? Math.round(w / 2.54 * 96) : w, lh = m === "cm" ? Math.round(hh / 2.54 * 96) : hh;
+      msg = await saveFile(`圖表/${name}.svg`, new Blob([Charts.render(EXP.spec, EXP.st, { w: lw, h: lh })], { type: "image/svg+xml" }), name + ".svg");
+    } else {
+      const r = await Charts.toPNG(EXP.spec, EXP.st, { mode: m, w, h: hh, dpi: $("pDpi").value, scale: $("pScale").value });
+      msg = await saveFile(`圖表/${name}.png`, r.blob, name + ".png") + `（${r.px[0]}×${r.px[1]}）`;
+    }
+    dlg.close(); toast(msg);
+  };
+  dlg.showModal();
+}
+
+// ---------------------------------------------------------------- 共用元件
+function speciesOptions() {
+  return [...S.groups].filter((g) => g.include && !Core.NON_TAXON.test(g.name)).sort((a, b) => a.order - b.order).map((g) => g.name);
+}
+function speciesSelect(tab, def) {
+  const u = ui(tab); const opts = speciesOptions();
+  if (!u.sp || !opts.includes(u.sp)) u.sp = Core.resolveSpecies(S.cfg, S.groups, def) || opts[0];
+  return h("span", { class: "ctl" }, "物種 ", h("select", { onchange: (e) => { u.sp = e.target.value; markDirty(); renderTab(); } },
+    opts.map((n) => { const zh = S.cfg.aliases.find((a) => a.資料名稱 === n); return h("option", { value: n, selected: n === u.sp }, zh && zh.中文名 !== n ? `${n}（${zh.中文名}）` : n); })));
+}
+function segs(options, cur, onPick) {
+  return h("span", { class: "segs" }, options.map(([v, l]) => h("button", { class: v === cur ? "on" : "", onclick: () => onPick(v) }, l)));
+}
+const card = (title, ...kids) => h("div", { class: "card" }, title ? h("h2", {}, title) : null, ...kids);
+function logBox() {
+  const n = S.log.length; if (!n) return null;
+  return h("details", {}, h("summary", {}, `處理紀錄（${n}）`), makeTable([{ k: "類型" }, { k: "流水號" }, { k: "原表列號" }, { k: "內容" }], S.log, { name: "處理紀錄", maxHeight: "240px" }));
+}
+
+// ---------------------------------------------------------------- 分頁
+const TABS = [
+  ["fauna", "物種相"], ["mni", "MNI"], ["elements", "骨骼部位"], ["sex", "性別"], ["age", "年齡"], ["marks", "表面痕"], ["molars", "臼齒測量"], ["help", "說明"],
+];
+function buildTabs() {
+  $("tabs").innerHTML = "";
+  for (const [id, label] of TABS) $("tabs").append(h("button", { class: id === S.tab ? "on" : "", onclick: () => { S.tab = id; buildTabs(); renderTab(); } }, label));
+}
+async function renderTab() {
+  const body = $("tabBody");
+  const scroll = window.scrollY;
+  body.innerHTML = "";
+  const fn = RENDER[S.tab];
+  try { await fn(body); } catch (e) { console.error(e); body.append(h("div", { class: "notice" }, "發生錯誤：" + e.message)); }
+  window.scrollTo(0, scroll);
+}
+const RENDER = {};
+
+// ===== 物種相 =====
+RENDER.fauna = (body) => {
+  const u = ui("fauna");
+  u.value ||= "NISP"; u.hideNonTaxon ??= true; u.level ||= "物種";
+  // --- 分類層級與範圍
+  const levels = Core.TAXON_LEVELS.filter((c) => c === "物種" || S.rows.some((r) => r[c]));
+  if (!levels.includes(u.level)) u.level = "物種";
+  const lvl = u.level;
+  const scopeCols = levels.filter((c) => c !== lvl);
+  if (u.scopeCol && !scopeCols.includes(u.scopeCol)) { u.scopeCol = ""; u.scopeVal = ""; }
+  let rowsF = S.view;
+  if (u.scopeCol && u.scopeVal) rowsF = rowsF.filter((r) => (r[u.scopeCol] ?? "") === u.scopeVal);
+  const scopeVals = u.scopeCol ? [...Core.groupBy(S.view, (r) => r[u.scopeCol] ?? "")].map(([v, rs]) => [v, rs.length]).sort((a, b) => b[1] - a[1]) : [];
+  // 物種層級使用「物種對照表」；其他層級各自有一份合併／排序設定（存在網頁工具設定中）
+  let G;
+  if (lvl === "物種") G = S.groups;
+  else {
+    S.settings.levelGroups ||= {};
+    G = S.settings.levelGroups[lvl] = Core.defaultSpeciesGroups(S.rows, S.settings.levelGroups[lvl] || null, lvl).groups;
+  }
+  const setG = (ng) => { if (lvl === "物種") S.groups = ng; else S.settings.levelGroups[lvl] = ng; };
+  const res = Core.fauna(rowsF, G, lvl);
+  const scopeTxt = u.scopeCol && u.scopeVal ? `（${u.scopeCol}＝${u.scopeVal}）` : "";
+  const top = h("div", { class: "row" },
+    h("span", { class: "ctl" }, "計算欄位 ", h("select", { onchange: (e) => { u.level = e.target.value; markDirty(); renderTab(); } }, levels.map((c) => h("option", { selected: c === lvl }, c)))),
+    h("span", { class: "ctl" }, "範圍 ", h("select", { onchange: (e) => { u.scopeCol = e.target.value; u.scopeVal = ""; markDirty(); renderTab(); } },
+      [h("option", { value: "" }, "（全部）"), ...scopeCols.map((c) => h("option", { selected: c === u.scopeCol }, c))])),
+    u.scopeCol ? h("select", { onchange: (e) => { u.scopeVal = e.target.value; markDirty(); renderTab(); } },
+      [h("option", { value: "" }, "（請選擇）"), ...scopeVals.map(([v, n]) => h("option", { value: v, selected: v === u.scopeVal }, `${v || "（空白）"}（${n}）`))]) : null,
+    h("span", { class: "muted" }, levels.length > 1 ? "例如：計算欄位＝物種、範圍＝綱：鳥綱，只看鳥類各物種；或計算欄位＝科。" : "清單中沒有綱／目／科／屬欄位，只能以物種計算。"));
+
+  // --- 名稱設定清單（合併、排序、納入）
+  const groups = [...G].sort((a, b) => a.order - b.order);
+  const viewNisp = new Map(res.table.map((x) => [x.物種, x.NISP]));
+  const allNisp = new Map(); for (const r of S.rows) { const k = lvl === "物種" ? r._sp : r[lvl] ?? ""; allNisp.set(k, (allNisp.get(k) || 0) + r._qty); }
+  const changed = () => { markDirty(); if (lvl === "物種") reprepare(); renderTab(); };
+  const renumber = (list) => list.forEach((g, i) => (g.order = i + 1));
+  let dragName = null;
+  const move = (g, d) => { const arr = [...groups]; const i = arr.indexOf(g), j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; renumber(arr); changed(); };
+  const mergeSel = (g, x) => h("select", { class: x ? "" : "msel", title: x ? "把這個原始名稱併入其他名稱或拆出" : "把這個名稱併入其他名稱", onchange: (e) => {
+    const to = e.target.value; if (!to) return;
+    const moving = x ? [x] : g.raws;
+    g.raws = g.raws.filter((y) => !moving.includes(y));
+    if (to === "__new") G.push({ name: x.raw, order: g.order + 0.5, include: g.include, raws: [x] });
+    else G.find((y) => y.name === to).raws.push(...moving);
+    if (!g.raws.length) G.splice(G.indexOf(g), 1);
+    renumber([...G].sort((a, b) => a.order - b.order)); changed();
+  } }, h("option", { value: "" }, x ? "▾" : "併入…"), x && g.raws.length > 1 ? h("option", { value: "__new" }, "拆成獨立名稱") : null,
+  groups.filter((y) => y !== g).map((y) => h("option", { value: y.name }, "併入 " + y.name)));
+  // 範圍限定時，只列出範圍內出現的名稱
+  const inScope = new Set(rowsF.map((r) => (lvl === "物種" ? r._sp : r[lvl] ?? "")));
+  const shown = u.scopeVal ? groups.filter((g) => inScope.has(g.name) || g.raws.some((x) => inScope.has(x.raw))) : groups;
+  const list = h("div", { class: "sp-list" }, shown.map((g) => {
+    const item = h("div", { class: "sp-item" + (g.include ? "" : " excl"), draggable: "true",
+      ondragstart: (e) => { dragName = g.name; e.dataTransfer.effectAllowed = "move"; },
+      ondragover: (e) => { e.preventDefault(); item.classList.add("drag-over"); },
+      ondragleave: () => item.classList.remove("drag-over"),
+      ondrop: (e) => {
+        e.preventDefault(); item.classList.remove("drag-over");
+        if (!dragName || dragName === g.name) return;
+        const arr = groups.filter((x) => x.name !== dragName); const moved = groups.find((x) => x.name === dragName);
+        arr.splice(arr.indexOf(g), 0, moved); renumber(arr); changed();
+      } },
+    h("span", { class: "handle", title: "拖曳調整順序（平板請用 ▲▼）" }, "≡"),
+    h("input", { type: "checkbox", checked: g.include, title: "納入物種相", onchange: (e) => { g.include = e.target.checked; changed(); } }),
+    h("input", { type: "text", value: g.name, title: "合併名稱（改成另一個已有名稱即合併）", onchange: (e) => {
+      const nn = e.target.value.trim(); if (!nn || nn === g.name) return;
+      const other = G.find((x) => x.name === nn);
+      if (other) { other.raws.push(...g.raws); G.splice(G.indexOf(g), 1); }
+      else g.name = nn;
+      changed();
+    } }),
+    h("span", { class: "muted", title: "目前篩選與範圍下的 NISP" }, `${viewNisp.get(g.name) ?? 0}`),
+    h("span", { class: "updown" }, h("button", { class: "mini", title: "上移", onclick: () => move(g, -1) }, "▲"), h("button", { class: "mini", title: "下移", onclick: () => move(g, 1) }, "▼")),
+    mergeSel(g, null),
+    g.raws.length > 1 ? h("div", { class: "raws" }, h("span", { class: "muted small" }, "含："), g.raws.map((x) => h("span", { class: "chip", title: `原始名稱 ${x.raw}：${x.n} 筆` }, `${x.raw || "（空白）"}（${x.n}）`, mergeSel(g, x)))) : null);
+    return item;
+  }));
+  const tools = h("div", { class: "row", style: { margin: "8px 0" } },
+    h("button", { class: "mini", onclick: () => {
+      const cat = (n) => (Core.NON_TAXON.test(n) ? (/sze|size/i.test(n) ? 2 : 3) : 1);
+      renumber([...G].sort((a, b) => cat(a.name) - cat(b.name) || (allNisp.get(b.name) || 0) - (allNisp.get(a.name) || 0))); changed();
+    } }, "依 NISP 排序"),
+    h("button", { class: "mini", onclick: () => { if (!confirm(`「${lvl}」的合併、順序、納入設定都會回到自動預設（大小寫合併）。確定？`)) return; setG(Core.defaultSpeciesGroups(S.rows, null, lvl).groups); changed(); } }, "重設為預設"));
+  const left = card(`${lvl}設定`, h("div", { class: "muted" }, "勾選＝納入；拖曳 ≡ 調整順序；改名稱可合併（改成已有的名稱）；原始名稱旁的 ▾ 可併入其他名稱或拆出。" + (lvl === "物種" ? "物種的合併也會影響其他分頁。" : "")), tools, list);
+
+  // --- 結果表
+  const cols = [{ k: "物種", label: lvl }, { k: "NISP", f: "int" }, { k: "百分比", f: "pct" }, { k: "可鑑定百分比", label: "百分比（僅可鑑定）", f: "pct" }];
+  if (res.hasW) cols.push({ k: "重量", f: "num" }, { k: "重量百分比", f: "pct" });
+  cols.push({ k: "筆數", label: "紀錄筆數", f: "int" });
+  const total = { 物種: "合計", NISP: res.total, 百分比: 1, 可鑑定百分比: 1, 筆數: Core.sum(res.table, (x) => x.筆數), 重量: res.wTotal, 重量百分比: res.hasW ? 1 : null };
+  const tbl = makeTable(cols, res.table, { total, name: `${S.site}_動物相_${lvl}${u.scopeVal ? "_" + u.scopeVal : ""}`, title: `遺址${lvl}相${scopeTxt}（NISP = 數量加總${res.hasW ? "；重量 = 重量欄加總" : ""}）` });
+  // --- 圖
+  const valOpts = [["NISP", "NISP"], ["百分比", "百分比"], ["可鑑定百分比", "百分比（僅可鑑定）"]].concat(res.hasW ? [["重量", "重量"], ["重量百分比", "重量百分比"]] : []);
+  if (!valOpts.some(([v]) => v === u.value)) u.value = "NISP";
+  const chartOpts = h("div", { class: "row small" },
+    "數值 ", h("select", { onchange: (e) => { u.value = e.target.value; markDirty(); renderTab(); } }, valOpts.map(([v, l]) => h("option", { value: v, selected: u.value === v }, l))),
+    h("label", {}, h("input", { type: "checkbox", checked: !!u.hideNonTaxon, onchange: (e) => { u.hideNonTaxon = e.target.checked; markDirty(); renderTab(); } }), " 圖中不顯示 UN／不明與體型分級"));
+  const ch = chartCard("fauna", (type) => {
+    let t = res.table; if (u.hideNonTaxon || u.value === "可鑑定百分比") t = t.filter((x) => !Core.NON_TAXON.test(x.物種));
+    const pct = /百分比/.test(u.value);
+    return { type, categories: t.map((x) => x.物種), series: [{ name: u.value, values: t.map((x) => x[u.value]) }], valueFormat: u.value === "NISP" ? "int" : pct ? "pct" : "num",
+      title: `遺址${lvl}相${scopeTxt}`, yLabel: u.value === "重量" ? "重量 (g)" : u.value };
+  }, { types: ["bar", "hbar"] });
+  body.append(card(null, top), h("div", { class: "split" }, left, card(null, tbl, logBox())), card("圖表", chartOpts, ch));
+};
+
+// ===== MNI =====
+RENDER.mni = (body) => {
+  const u = ui("mni");
+  const ov = S.settings.mniOverride;
+  const res = Core.mni(S.view, S.cfg, S.groups, ov);
+  if (!u.sp || !res.detail[u.sp]) u.sp = res.species.find((x) => x.物種 === Core.resolveSpecies(S.cfg, S.groups, "Sus"))?.物種 || res.species[0]?.物種;
+  u.series ||= ["側別MNI", "區位MNI"];
+  const sumCols = [{ k: "物種" }, { k: "側別MNI", f: "int" }, { k: "側別百分比", label: "側別%", f: "pct" }, { k: "側別依據" },
+    { k: "區位MNI", f: "int" }, { k: "區位百分比", label: "區位%", f: "pct" }, { k: "區位依據" },
+    { k: "_m", label: "", render: (r) => (ov[r.物種] && Object.keys(ov[r.物種]).length ? h("span", { class: "pill mod" }, "已調整部位") : "") }];
+  const total = { 物種: "合計", 側別MNI: res.totalSide, 側別百分比: 1, 區位MNI: res.totalZone, 區位百分比: 1 };
+  const sumTbl = makeTable(sumCols, res.species, { total, name: `${S.site}_MNI`, title: "MNI（點選物種可調整採計部位）",
+    onClick: (r) => { u.sp = r.物種; markDirty(); renderTab(); }, rowClass: (r) => (r.物種 === u.sp ? "sel" : "") });
+  // --- 部位明細
+  const det = res.detail[u.sp] || [];
+  const sideMax = Math.max(0, ...det.filter((e) => e.納入).map((e) => e.側別最大));
+  const zoneMax = Math.max(0, ...det.filter((e) => e.納入).map((e) => e.區位最大));
+  const toggle = (el, v) => {
+    const def = Core.mniDefault(S.cfg, u.sp, el);
+    ov[u.sp] ||= {};
+    if (v === def) delete ov[u.sp][el]; else ov[u.sp][el] = v;
+    if (!Object.keys(ov[u.sp]).length) delete ov[u.sp];
+    markDirty(); renderTab();
+  };
+  const zs = (s) => (r) => r[s].zoned + "/" + r[s].n;
+  const detCols = [
+    { k: "納入", render: (r) => h("input", { type: "checkbox", checked: r.納入, onchange: (e) => toggle(r.骨骼部位, e.target.checked) }), text: (r) => (r.納入 ? "Y" : "N") },
+    { k: "骨骼部位" }, { k: "預設", f: (v, r) => (r.預設 ? "Y" : "N") },
+    { k: "L件", label: "L 件", render: (r) => String(r.L.n), num: true, cls: (r) => (r.納入 && r.L.n === sideMax ? "star" : "") },
+    { k: "R件", label: "R 件", render: (r) => String(r.R.n), num: true, cls: (r) => (r.納入 && r.R.n === sideMax ? "star" : "") },
+    { k: "L區", label: "L 區位MNE", render: (r) => String(r.L.mne), num: true, cls: (r) => (r.納入 && r.L.mne === zoneMax ? "star" : "") },
+    { k: "R區", label: "R 區位MNE", render: (r) => String(r.R.mne), num: true, cls: (r) => (r.納入 && r.R.mne === zoneMax ? "star" : "") },
+    { k: "Lz", label: "L 有區位/件", render: zs("L"), num: true }, { k: "Rz", label: "R 有區位/件", render: zs("R"), num: true },
+  ];
+  if (u.showZones) detCols.push({ k: "zones", label: "標本區位（流水號:區位）", render: (r) => ["L", "R"].filter((s) => r[s].specimens.length).map((s) => `${s} ▸ ` + r[s].specimens.map((x) => `${x.id}:${x.zones}`).join(" | ")).join("　") });
+  const detTbl = makeTable(detCols, det, { name: `${S.site}_MNI_${u.sp}`, title: `${u.sp}：部位明細`,
+    rowClass: (r) => [r.納入 !== r.預設 ? "mod" : "", r.納入 ? "" : "off"].join(" ") });
+  const detCard = card(null,
+    h("div", { class: "row small" }, "★ = 目前的最大值（決定 MNI）。黃色列＝與預設不同。",
+      h("label", {}, h("input", { type: "checkbox", checked: !!u.showZones, onchange: (e) => { u.showZones = e.target.checked; markDirty(); renderTab(); } }), " 顯示標本區位"),
+      ov[u.sp] ? h("button", { class: "mini", onclick: () => { delete ov[u.sp]; markDirty(); renderTab(); } }, "此物種恢復預設") : null),
+    detTbl,
+    h("div", { class: "muted", style: { marginTop: "6px" } }, "側別 MNI＝同側同部位件數最大值；區位 MNI＝同側同部位標本區位（1–8）重疊即為不同骨，求最少骨數。沒有區位紀錄的標本不增加 MNE；整個部位都沒有區位紀錄時記為 1。預設採計的部位依 程式/設定/骨骼分類.csv。"));
+  // --- 圖
+  const chartOpts = h("div", { class: "row small" }, ["側別MNI", "區位MNI"].map((k) => h("label", {}, h("input", { type: "checkbox", checked: u.series.includes(k), onchange: (e) => {
+    u.series = e.target.checked ? [...new Set([...u.series, k])] : u.series.filter((x) => x !== k); markDirty(); renderTab(); } }), " " + k)),
+    h("label", {}, h("input", { type: "checkbox", checked: !!u.hidePresence, onchange: (e) => { u.hidePresence = e.target.checked; markDirty(); renderTab(); } }), " 不顯示「以出現計 1」的物種"));
+  const ch = chartCard("mni", (type) => {
+    let t = res.species; if (u.hidePresence) t = t.filter((x) => !/以出現計/.test(x.側別依據));
+    return { type, categories: t.map((x) => x.物種), series: u.series.map((k) => ({ name: k, values: t.map((x) => x[k]) })), valueFormat: "int" };
+  }, { types: ["bar", "hbar"], defaults: { title: "MNI", yLabel: "MNI" } });
+  body.append(card(null, sumTbl), detCard, card("圖表", chartOpts, ch));
+};
+
+// ===== 骨骼部位 =====
+RENDER.elements = (body) => {
+  const u = ui("elements");
+  const top = h("div", { class: "row" }, speciesSelect("elements", "Sus"));
+  const sp = u.sp; u.mode ||= "noside"; u.value ||= "加總"; u.sides ||= ["L", "R"]; u.sideValue ||= "件數";
+  const hidden = new Set((u.hidden ||= {})[sp] || []);
+  // 排除的部位不列入合計與百分比（三種模式一致）
+  const full = Core.elements(S.view, sp);
+  const res = Core.elements(S.view.filter((r) => r._sp !== sp || !hidden.has(r._el)), sp);
+  top.append(segs([["noside", "不分側別"], ["side", "分側別（左右對照）"], ["region", "區域小計"]], u.mode, (v) => { u.mode = v; markDirty(); renderTab(); }));
+  const setHidden = (el, on) => { on ? hidden.delete(el) : hidden.add(el); u.hidden[sp] = [...hidden]; markDirty(); renderTab(); };
+  const inclChk = (r) => h("input", { type: "checkbox", title: "納入計算與圖表", checked: !hidden.has(r.骨骼部位), onchange: (e) => setHidden(r.骨骼部位, e.target.checked) });
+  const offRows = (list) => list.filter((x) => hidden.has(x.骨骼部位)).map((x) => ({ ...x, _off: true }));
+  const offCls = (r) => (r._off ? "off" : "");
+  const pctOrBlank = (k) => ({ k, f: (v, r) => (r._off ? "" : fmtPct(v)), num: true });
+  const exclNote = hidden.size ? h("div", { class: "notice" }, `已排除：${[...hidden].join("、")}（不列入合計、百分比與圖表）`,
+    h("button", { class: "mini", style: { marginLeft: "8px" }, onclick: () => { u.hidden[sp] = []; markDirty(); renderTab(); } }, "全部納入")) : null;
+  let tbl, chartOpts, ch, extra = null;
+  if (u.mode === "region") {
+    tbl = makeTable([{ k: "骨骼區域" }, { k: "加總", f: "int" }, { k: "整體百分比", f: "pct" }], res.regions, { total: { 骨骼區域: "合計", 加總: res.total, 整體百分比: 1 }, name: `${S.site}_骨骼區域_${sp}`,
+      title: hidden.size ? `骨骼區域小計（已排除 ${hidden.size} 個部位）` : "骨骼區域小計" });
+    // 部位勾選清單（依區域）
+    const byReg = Core.groupBy(full.noSide, (x) => x.骨骼區域);
+    extra = card("納入計算的部位", h("div", { class: "muted" }, "取消勾選的部位不列入區域小計（例如牙齒）。"),
+      h("div", { class: "row", style: { alignItems: "flex-start", gap: "18px", marginTop: "6px" } }, [...byReg].map(([rg, xs]) => h("div", {},
+        h("div", { class: "row" }, h("b", { class: "small" }, rg),
+          h("button", { class: "mini", onclick: () => { xs.forEach((x) => hidden.delete(x.骨骼部位)); u.hidden[sp] = [...hidden]; markDirty(); renderTab(); } }, "全選"),
+          h("button", { class: "mini", onclick: () => { xs.forEach((x) => hidden.add(x.骨骼部位)); u.hidden[sp] = [...hidden]; markDirty(); renderTab(); } }, "全不選")),
+        xs.map((x) => h("label", { style: { display: "flex", gap: "6px", fontSize: "13px" } },
+          h("input", { type: "checkbox", checked: !hidden.has(x.骨骼部位), onchange: (e) => setHidden(x.骨骼部位, e.target.checked) }),
+          h("span", {}, x.骨骼部位), h("span", { class: "muted", style: { marginLeft: "auto" } }, String(x.加總))))))));
+    chartOpts = h("div", { class: "row small" }, "數值 ", h("select", { onchange: (e) => { u.value = e.target.value === "整體百分比" ? "整體百分比" : "加總"; markDirty(); renderTab(); } }, ["加總", "整體百分比"].map((v) => h("option", { selected: u.value === v }, v))));
+    const vk = u.value === "加總" ? "加總" : "整體百分比";
+    ch = chartCard("elements_region", (type) => ({ type, categories: res.regions.map((x) => x.骨骼區域), defaultColorBy: "category", valueFormat: vk === "加總" ? "int" : "pct",
+      series: [{ name: vk, values: res.regions.map((x) => x[vk]) }], title: `${sp} 骨骼區域`, yLabel: vk === "加總" ? "NISP" : "百分比" }), { types: ["bar", "hbar"] });
+  } else if (u.mode === "noside") {
+    tbl = makeTable([{ k: "納入", render: (r) => inclChk(r), text: (r) => (r._off ? "排除" : "") }, { k: "骨骼區域" }, { k: "骨骼部位" }, { k: "加總", f: "int" }, pctOrBlank("區域百分比"), pctOrBlank("整體百分比")],
+      res.noSide.concat(offRows(full.noSide)), { total: { 骨骼區域: "合計", 加總: res.total, 整體百分比: 1 }, name: `${S.site}_骨骼部位_${sp}`, rowClass: offCls });
+    chartOpts = h("div", { class: "row small" },
+      "數值 ", h("select", { onchange: (e) => { u.value = e.target.value; markDirty(); renderTab(); } }, ["加總", "整體百分比", "區域百分比"].map((v) => h("option", { selected: u.value === v }, v))),
+      h("span", { class: "muted" }, "同一區域預設同色；表格「納入」欄取消勾選可排除該部位（例如牙齒）。"));
+    const els = res.noSide;
+    ch = chartCard("elements_noside", (type) => ({ type, categories: els.map((x) => x.骨骼部位), catGroups: els.map((x) => x.骨骼區域), defaultColorBy: "group",
+      series: [{ name: u.value, values: els.map((x) => x[u.value]) }], valueFormat: u.value === "加總" ? "int" : "pct",
+      title: `${sp} 骨骼部位分布`, yLabel: u.value === "加總" ? "NISP" : u.value }), { types: ["bar", "hbar"] });
+  } else {
+    tbl = makeTable([{ k: "納入", render: (r) => inclChk(r), text: (r) => (r._off ? "排除" : "") }, { k: "骨骼區域" }, { k: "骨骼部位" }, { k: "L", label: "左 L", f: "int" }, { k: "R", label: "右 R", f: "int" },
+      { k: "合計", label: "左右合計", f: "int" }, pctOrBlank("L百分比"), pctOrBlank("R百分比")], res.sides.concat(offRows(full.sides)),
+    { total: { 骨骼區域: "合計", L: res.totL, R: res.totR, 合計: res.totL + res.totR, L百分比: 1, R百分比: 1 }, name: `${S.site}_骨骼部位左右_${sp}`, rowClass: offCls,
+      title: `只列有左／右紀錄的部位；不分側（Ax、-、UN）共 ${res.nonLR} 件未列入` });
+    chartOpts = h("div", { class: "row small" }, "側別 ",
+      [["L", "左側"], ["R", "右側"]].map(([k, l]) => h("label", {}, h("input", { type: "checkbox", checked: u.sides.includes(k), onchange: (e) => {
+        u.sides = e.target.checked ? ["L", "R"].filter((x) => u.sides.includes(x) || x === k) : u.sides.filter((x) => x !== k); markDirty(); renderTab(); } }), " " + l)),
+      "　數值 ", h("select", { onchange: (e) => { u.sideValue = e.target.value; markDirty(); renderTab(); } }, ["件數", "佔同側百分比"].map((v) => h("option", { selected: u.sideValue === v }, v))),
+      h("span", { class: "muted" }, "同側預設同色，左右並列；第一級分組標在軸下。"));
+    const els = res.sides;
+    const pctMode = u.sideValue !== "件數";
+    ch = chartCard("elements_side", (type) => ({ type, categories: els.map((x) => x.骨骼部位), catGroups: els.map((x) => x.骨骼區域), defaultColorBy: "series",
+      series: u.sides.map((sd) => ({ name: sd === "L" ? "左 L" : "右 R", values: els.map((x) => (pctMode ? x[sd + "百分比"] : x[sd])) })), valueFormat: pctMode ? "pct" : "int",
+      title: `${sp} 骨骼部位（左右對照）`, yLabel: pctMode ? "佔同側百分比" : "NISP" }), { types: ["bar", "hbar"] });
+  }
+  body.append(card(null, top, exclNote), u.mode === "region" ? h("div", { class: "split" }, card(null, tbl), extra) : card(null, tbl), card("圖表", chartOpts, ch));
+};
+
+// ===== 性別 =====
+RENDER.sex = (body) => {
+  const u = ui("sex");
+  const top = h("div", { class: "row" }, speciesSelect("sex", "Sus"));
+  const sp = u.sp; const ov = S.settings.sexOverride;
+  const res = Core.sex(S.view, S.cfg, sp, ov);
+  const tot = { 性別: "合計", 上顎: Core.sum(res.table, (x) => x.上顎), 下顎: Core.sum(res.table, (x) => x.下顎), 不明: Core.sum(res.table, (x) => x.不明), 合計: Core.sum(res.table, (x) => x.合計) };
+  const sumTbl = makeTable([{ k: "性別" }, { k: "上顎", f: "int" }, { k: "下顎", f: "int" }, { k: "不明", label: "上下顎不明", f: "int" }, { k: "合計", f: "int" }], res.table, { total: tot, name: `${S.site}_性別_${sp}`, title: "性別結構（只計採計者，每筆紀錄算 1）" });
+  const setOv = (id, k, v, auto) => { ov[id] ||= {}; if (v === auto) delete ov[id][k]; else ov[id][k] = v; if (!Object.keys(ov[id]).length) delete ov[id]; markDirty(); renderTab(); };
+  const detTbl = makeTable([
+    { k: "採計", render: (r) => h("input", { type: "checkbox", checked: r.採計, onchange: (e) => setOv(r.流水號, "採計", e.target.checked, r.自動採計) }), text: (r) => (r.採計 ? "Y" : "N") },
+    { k: "流水號" }, { k: "骨骼" }, { k: "側" }, { k: "備註" }, { k: "判定詞" },
+    { k: "性別", render: (r) => h("select", { onchange: (e) => setOv(r.流水號, "性別", e.target.value, r.性別) }, Core.SEX_ROWS.concat(r.性別 === "矛盾" ? ["矛盾"] : []).map((s) => h("option", { selected: s === r.性別_用 }, s))), text: (r) => r.性別_用 },
+    { k: "上下顎", render: (r) => h("select", { onchange: (e) => setOv(r.流水號, "上下顎", e.target.value, r.上下顎) }, ["上顎", "下顎", "不明"].map((s) => h("option", { selected: s === r.上下顎_用 }, s))), text: (r) => r.上下顎_用 },
+    { k: "犬齒依據" }, { k: "同個體註記", label: "同個體" }, { k: "不採計原因" },
+  ], res.detail, { name: `${S.site}_性別明細_${sp}`, title: "判定明細（可修改採計、性別、上下顎；黃色＝已修改）", rowClass: (r) => [r.已修改 ? "mod" : "", r.採計 ? "" : "off"].join(" ") });
+  const ch = chartCard("sex", (type) => ({ type, categories: res.table.map((x) => x.性別), valueFormat: "int",
+    series: ["上顎", "下顎", "不明"].filter((k) => res.table.some((x) => x[k])).map((k) => ({ name: k, values: res.table.map((x) => x[k]) })) }),
+  { types: ["bar", "hbar"], defaults: { title: `${sp} 性別結構`, yLabel: "件數", stacked: true } });
+  body.append(card(null, top, Object.keys(ov).length ? h("button", { class: "mini", style: { marginTop: "6px" }, onclick: () => { if (confirm("清除所有性別判定的修改？")) { S.settings.sexOverride = {}; markDirty(); renderTab(); } } }, "清除所有修改") : null),
+    card(null, sumTbl), card("圖表", ch), card(null, detTbl));
+};
+
+// ===== 年齡 =====
+async function longsFor(sp) {
+  if (S.longCache[sp]) return S.longCache[sp];
+  const longs = { mandible: [], tooth: [], maxilla: [] };
+  if (S.parsedDir && S.folderIndex) {
+    const g = S.groups.find((x) => x.name === sp);
+    const raws = new Set(g ? g.raws.map((x) => x.raw) : [sp]);
+    for (const row of S.folderIndex.filter((x) => raws.has(x.物種))) {
+      const dir = sitePath(`${S.parsedDir}/${row.資料夾}`);
+      const files = (await S.fs.list(dir)) || [];
+      for (const f of files) {
+        const m = /_長表_(.+)\.csv$/i.exec(f.name);
+        if (!m || !(m[1].toLowerCase() in longs)) continue;
+        longs[m[1].toLowerCase()].push(...Core.parseCSV(await S.fs.readText(`${dir}/${f.name}`)).rows);
+      }
+    }
+  }
+  if (!S.folderIndex) {
+    // 平板／選檔模式：直接選取的「物種_長表_骨骼.csv」
+    const g = S.groups.find((x) => x.name === sp);
+    const names = new Set([sp, ...(g ? g.raws.map((x) => x.raw) : [])].map((x) => String(x).toLowerCase().replace(/[\\/:*?"<>| ]+/g, "_")));
+    for (const f of ((await S.fs.list(S.site)) || []).filter((x) => x.kind === "file")) {
+      const m = /^(.+?)(?:_\d+)?_長表_(mandible|tooth|maxilla)\.csv$/i.exec(f.name);
+      if (m && names.has(m[1].toLowerCase())) longs[m[2].toLowerCase()].push(...Core.parseCSV(await S.fs.readText(sitePath(f.name))).rows);
+    }
+  }
+  return (S.longCache[sp] = longs);
+}
+RENDER.age = async (body) => {
+  const u = ui("age");
+  const top = h("div", { class: "row" }, speciesSelect("age", "Sus"));
+  const sp = u.sp; u.jaw ||= "全部"; u.teeth ||= [...Core.MAIN_TEETH]; u.value ||= "件數"; u.sys ||= "Simplified-B";
+  body.append(card(null, top, h("div", { class: "muted" }, "讀取長表…")));
+  const longs = await longsFor(sp);
+  body.innerHTML = "";
+  const res = Core.age(S.view, S.cfg, sp, longs);
+  const wm = (S.settings.wearMap ||= {});
+  const scoreOf = (raw) => (raw in wm ? wm[raw] : Core.defaultWearScore(raw).expr);
+  top.append(h("span", { class: "ctl" }, "上下顎 ", h("select", { onchange: (e) => { u.jaw = e.target.value; markDirty(); renderTab(); } }, ["全部", "下顎", "上顎", "不明"].map((v) => h("option", { selected: u.jaw === v }, v)))),
+    h("span", { class: "ctl" }, "年齡組系統 "), segs(Core.SYSTEMS.map((x) => [x, x]), u.sys, (v) => { u.sys = v; markDirty(); renderTab(); }));
+  const rows = res.table.filter((r) => u.jaw === "全部" || (r.上下顎 || "不明") === u.jaw);
+  // --- Lemoine 判定
+  for (const r of rows) for (const sys of Core.SYSTEMS) { const a = Core.lemoineAssign(r, sys, scoreOf); r["_" + sys] = a; r[sys] = a.cls || ""; }
+  const assigned = rows.map((r) => r[u.sys]).filter(Boolean);
+  const summ = Core.lemoineSummary(assigned, u.sys);
+  const unres = rows.length - assigned.length;
+
+  // --- 磨耗寫法對照
+  const wcount = new Map();
+  for (const r of res.table) for (const t of Core.MAIN_TEETH) for (const v of String(r[t] || "").split(/;\s*/).filter(Boolean)) wcount.set(v, (wcount.get(v) || 0) + 1);
+  const wrows = [...wcount].map(([raw, n]) => { const d = Core.defaultWearScore(raw); return { 原始寫法: raw, 件數: n, 預設: d.expr, 說明: d.note, _flag: d.flag, 使用: scoreOf(raw) }; })
+    .sort((a, b) => Core.wearRank(a.原始寫法) - Core.wearRank(b.原始寫法) || a.原始寫法.localeCompare(b.原始寫法));
+  const wtbl = makeTable([{ k: "原始寫法" }, { k: "件數", f: "int" },
+    { k: "使用", label: "Lemoine 分數", render: (r) => h("input", { type: "text", value: r.使用, style: { width: "70px" }, placeholder: "空白＝不採用", onchange: (e) => {
+      const v = e.target.value.trim(); if (v === r.預設) delete wm[r.原始寫法]; else wm[r.原始寫法] = v; markDirty(); renderTab(); } }), text: (r) => r.使用 },
+    { k: "預設" }, { k: "說明" }], wrows,
+  { name: `${S.site}_磨耗對照_${sp}`, title: "磨耗寫法 → Lemoine 分數", maxHeight: "430px",
+    rowClass: (r) => (r.原始寫法 in wm ? "mod" : r._flag ? "warn" : "") });
+  const wnote = h("div", { class: "muted", style: { marginTop: "6px" } },
+    "分數（Lemoine et al. 2014 Table 1）：0 未萌出、1–3 齒囊中、4 萌出穿過骨、5 萌出一半、6 完全萌出無磨耗、7–19 = Grant a–n（無 i）。可填範圍（如 1-3）或多值（如 9,11）。橘色＝自動判讀但需確認；黃色＝已修改。");
+
+  // --- 年齡組統計
+  const L = Core.LEMOINE[u.sys];
+  const stbl = makeTable([{ k: "年齡組" }, { k: "年齡估計" }, { k: "件數", f: "int" }, { k: "死亡率", label: "死亡率（%）", f: "pct" }, { k: "存活率", label: "存活率（%）", f: "pct" }],
+    summ.rows, { total: { 年齡組: "合計", 件數: summ.n, 死亡率: 1 }, name: `${S.site}_年齡組_${u.sys}_${sp}`, title: `${u.sys} 年齡組（判定 ${summ.n} 件；無法判定 ${unres} 件）` });
+  const snote = h("div", { class: "muted", style: { marginTop: "6px" } },
+    "判定方式（Lemoine et al. 2014 §3.2）：每顆牙依分數對照 Table 3 找出可能的年齡組，同一列（同一流水號、同上下顎）各齒可能組別的眾數若唯一，即為該列的年齡組；否則不列入該系統。存活率＝100% 減去累計死亡率。上顎與下顎依各自的範圍判定；上下顎不明者兩者皆可。");
+
+  // --- 存活曲線
+  // 分組比較（例如各文化層各畫一條曲線）
+  const byId = new Map(); for (const r of S.view) if (!byId.has(r.流水號)) byId.set(r.流水號, r);
+  const gcol = u.compare || "";
+  const cmpMap = gcol ? ((u.cmpMap ||= {})[gcol] ||= {}) : {};
+  const cmpHide = new Set(gcol ? ((u.cmpHide ||= {})[gcol] || []) : []);
+  const rawOf = (r) => String((byId.get(r.流水號) || {})[gcol] ?? "") || "（空白）";
+  const tgtOf = (v) => (v in cmpMap ? cmpMap[v] : v);
+  let groupsCmp = [], cmpEditor = null;
+  if (gcol) {
+    const asg = rows.filter((r) => r[u.sys]);
+    const gm = Core.groupBy(asg.filter((r) => tgtOf(rawOf(r)) && !cmpHide.has(tgtOf(rawOf(r)))), (r) => tgtOf(rawOf(r)));
+    groupsCmp = [...gm].sort((a, b) => b[1].length - a[1].length).map(([g, rs]) => ({ g, summ: Core.lemoineSummary(rs.map((r) => r[u.sys]), u.sys) }))
+      .filter((x) => x.summ.n >= (Number(u.minN) || 1));
+    // --- 分組編輯：原始值 → 歸入組；組別顯示與否
+    const rawCnt = new Map(); for (const r of asg) rawCnt.set(rawOf(r), (rawCnt.get(rawOf(r)) || 0) + 1);
+    const raws = [...rawCnt].sort((a, b) => String(a[0]).localeCompare(String(b[0]), "zh-Hant"));
+    const tgtCnt = new Map(); for (const [v, n] of raws) { const t = tgtOf(v); if (t) tgtCnt.set(t, (tgtCnt.get(t) || 0) + n); }
+    const changed = () => { u.cmpHide[gcol] = [...cmpHide]; markDirty(); renderTab(); };
+    const dl = h("datalist", { id: "cmpTargets" }, [...tgtCnt.keys()].map((t) => h("option", { value: t })));
+    const rawTbl = makeTable([{ k: "原始值" }, { k: "件數", f: "int" },
+      { k: "歸入", render: (r) => h("input", { type: "text", list: "cmpTargets", value: tgtOf(r.原始值), style: { width: "150px" }, placeholder: "空白＝不列入", onchange: (e) => {
+        const v = e.target.value.trim(); if (v === r.原始值) delete cmpMap[r.原始值]; else cmpMap[r.原始值] = v; changed(); } }), text: (r) => tgtOf(r.原始值) }],
+    raws.map(([v, n]) => ({ 原始值: v, 件數: n })), { name: `${S.site}_分組對照_${gcol}`, title: "原始值 → 歸入組（改成同一名稱即合併；清空＝不列入）", maxHeight: "300px",
+      rowClass: (r) => (r.原始值 in cmpMap ? "mod" : "") });
+    const grpList = h("div", { class: "vals", style: { maxHeight: "300px" } }, [...tgtCnt].sort((a, b) => b[1] - a[1]).map(([t, n]) => h("label", { style: { display: "flex", gap: "6px" } },
+      h("input", { type: "checkbox", checked: !cmpHide.has(t), onchange: (e) => { e.target.checked ? cmpHide.delete(t) : cmpHide.add(t); changed(); } }),
+      h("span", {}, t), h("span", { class: "muted", style: { marginLeft: "auto" } }, `n=${n}${n < (Number(u.minN) || 1) ? "（不足）" : ""}`))));
+    cmpEditor = h("details", { open: u.cmpOpen ? true : null, ontoggle: (e) => { u.cmpOpen = e.target.open; } },
+      h("summary", {}, `調整「${gcol}」分組（合併、只顯示部分組）`),
+      h("div", { class: "row", style: { margin: "6px 0" } },
+        h("button", { class: "mini", onclick: () => { for (const [v] of raws) { const t = v.replace(/\s*[*＊]+\s*$/, ""); if (t && t !== v) cmpMap[v] = t; } changed(); } }, "自動合併：去掉結尾的 *"),
+        h("button", { class: "mini", onclick: () => { cmpHide.clear(); [...tgtCnt.keys()].forEach((t) => cmpHide.add(t)); changed(); } }, "全不顯示"),
+        h("button", { class: "mini", onclick: () => { cmpHide.clear(); changed(); } }, "全部顯示"),
+        h("button", { class: "mini", onclick: () => { if (!confirm(`清除「${gcol}」的所有合併與顯示設定？`)) return; u.cmpMap[gcol] = {}; u.cmpHide[gcol] = []; markDirty(); renderTab(); } }, "重設")),
+      h("div", { class: "split" }, h("div", {}, rawTbl, dl), h("div", {}, h("b", { class: "small" }, "顯示的組（勾選）"), grpList)));
+  }
+  const cmpCols = S.header.filter((c) => !/^(流水號|原代號|備註|數量|GL|WA|WP|WM|stage|齒位|[1-8])(\.\d+)?$/.test(c));
+  const chartOpts = h("div", { class: "row small" },
+    "分組比較 ", h("select", { onchange: (e) => { u.compare = e.target.value; markDirty(); renderTab(); } }, [h("option", { value: "" }, "（不分組）"), ...cmpCols.map((c) => h("option", { selected: gcol === c }, c))]),
+    gcol ? h("span", {}, "　每組至少 ", h("input", { type: "number", min: 1, value: u.minN || 1, style: { width: "56px" }, onchange: (e) => { u.minN = e.target.value; markDirty(); renderTab(); } }), " 件") : null,
+    h("label", {}, h("input", { type: "checkbox", checked: !!u.ageLabels, onchange: (e) => { u.ageLabels = e.target.checked; markDirty(); renderTab(); } }), " 類別標籤加上年齡"),
+    h("span", { class: "muted" }, "折線圖＝存活曲線（由出生 100% 降到 0%）；長條圖＝各年齡組死亡率。"));
+  const lab = (c) => (u.ageLabels ? `${c} (${L.ages[c]})` : c);
+  const sets = gcol ? groupsCmp.map((x) => ({ name: `${x.g}（n=${x.summ.n}）`, summ: x.summ })) : [{ name: `${sp}（n=${summ.n}）`, summ }];
+  const survChart = chartCard("age_surv", (type) => {
+    if (type === "line") return { type, title: `${sp} 存活曲線（${u.sys}）`, yLabel: "存活率", valueFormat: "pct", yFixed: [0, 1],
+      categories: ["出生", ...L.order.map(lab)], series: sets.map((x) => ({ name: x.name, values: [1, ...x.summ.rows.map((r) => r.存活率)] })) };
+    return { type, title: `${sp} 死亡率（${u.sys}）`, yLabel: "死亡率", valueFormat: "pct", categories: L.order.map(lab), series: sets.map((x) => ({ name: x.name, values: x.summ.rows.map((r) => r.死亡率) })) };
+  }, { types: ["line", "bar"], defaults: { pointSize: 4, lineWidth: 2, fill: false, legend: "right" } });
+  const cmpTbl = gcol && groupsCmp.length ? makeTable([{ k: "組" }, { k: "n", f: "int" }, ...L.order.flatMap((c) => [{ k: "m" + c, label: `${c} 死亡率`, f: "pct" }, { k: "s" + c, label: `${c} 存活率`, f: "pct" }])],
+    groupsCmp.map((x) => { const o = { 組: x.g, n: x.summ.n }; x.summ.rows.forEach((r) => { o["m" + r.年齡組] = r.死亡率; o["s" + r.年齡組] = r.存活率; }); return o; }),
+    { name: `${S.site}_年齡組分組_${u.sys}_${sp}`, title: `依「${gcol}」分組`, maxHeight: "300px" }) : null;
+
+  // --- 年齡結構表
+  const sysCol = (sys) => ({ k: sys, label: sys === "Specific" ? "Specific" : sys.replace("Simplified-", "Simp-"), render: (r) => (r[sys] ? (r["_" + sys].note ? h("span", { title: r["_" + sys].note }, r[sys] + " *") : r[sys]) : h("span", { class: "muted", title: r["_" + sys].note }, "—")),
+    text: (r) => r[sys] || "", cls: (r) => (sys === u.sys ? "star" : "") });
+  const tbl = makeTable([{ k: "流水號" }, { k: "骨骼" }, { k: "上下顎" }, ...Core.MAIN_TEETH.map((k) => ({ k })), sysCol("Specific"), sysCol("Simplified-A"), sysCol("Simplified-B"),
+    { k: "判定說明", render: (r) => r["_" + u.sys].note || "", text: (r) => r["_" + u.sys].note || "" }, { k: "其他齒位" }, { k: "側別" }, { k: "來源" }, { k: "檢查" }, { k: "原表列號" }], rows,
+  { name: `${S.site}_年齡_${sp}`, title: `年齡結構（${rows.length} 列；— ＝該系統無法判定，滑鼠移上可看原因；* ＝牙齒間不完全一致）`, rowClass: (r) => (r.檢查 ? "warn" : "") });
+
+  // --- 磨耗等級分布（原寫法）
+  const stages = new Map(); const counts = {};
+  for (const t of Core.MAIN_TEETH) counts[t] = new Map();
+  for (const r of rows) for (const t of Core.MAIN_TEETH) for (const v of String(r[t] || "").split("; ").filter(Boolean)) { stages.set(v, 1); counts[t].set(v, (counts[t].get(v) || 0) + 1); }
+  const stageList = [...stages.keys()].sort((a, b) => Core.wearRank(a) - Core.wearRank(b) || a.localeCompare(b));
+  const dist = stageList.map((s) => { const o = { 磨耗: s }; Core.MAIN_TEETH.forEach((t) => (o[t] = counts[t].get(s) || 0)); return o; });
+  const distTot = { 磨耗: "合計" }; Core.MAIN_TEETH.forEach((t) => (distTot[t] = Core.sum(dist, (x) => x[t])));
+  const distTbl = makeTable([{ k: "磨耗" }, ...Core.MAIN_TEETH.map((k) => ({ k, f: "int" }))], dist, { total: distTot, name: `${S.site}_磨耗分布_${sp}`, title: "各齒位磨耗等級件數（原寫法）", maxHeight: "380px" });
+  const distOpts = h("div", { class: "row small" }, "齒位 ", Core.MAIN_TEETH.map((t) => h("label", {}, h("input", { type: "checkbox", checked: u.teeth.includes(t), onchange: (e) => {
+    u.teeth = e.target.checked ? Core.MAIN_TEETH.filter((x) => u.teeth.includes(x) || x === t) : u.teeth.filter((x) => x !== t); markDirty(); renderTab(); } }), " " + t)),
+  "　數值 ", h("select", { onchange: (e) => { u.value = e.target.value; markDirty(); renderTab(); } }, ["件數", "齒位內百分比"].map((v) => h("option", { selected: u.value === v }, v))));
+  const distChart = chartCard("age", (type) => ({ type, categories: stageList, valueFormat: u.value === "件數" ? "int" : "pct", title: `${sp} 牙齒磨耗等級`, xLabel: "磨耗等級", yLabel: u.value,
+    series: u.teeth.map((t) => ({ name: t, values: dist.map((x) => (u.value === "件數" ? x[t] : distTot[t] ? x[t] / distTot[t] : 0)) })) }), { types: ["bar", "line", "hbar"] });
+
+  const miss = res.missing.length ? h("details", {}, h("summary", {}, `可能遺漏：備註看起來有磨耗、但長表與原表齒位欄都沒有的紀錄（${res.missing.length}）`),
+    makeTable([{ k: "原表列號" }, { k: "流水號" }, { k: "骨骼" }, { k: "側" }, { k: "備註" }], res.missing, { name: `${S.site}_年齡可能遺漏_${sp}`, maxHeight: "300px" })) : null;
+  const note = h("div", { class: "muted" }, `來源：${S.parsedDir ? "mandible／tooth 長表＋" : ""}原表「齒位／stage」欄。年齡組依 Lemoine et al. (2014) Table 3（dP4、P4、M1、M2、M3），年齡估計依 Table 7。`);
+  body.append(card(null, top, note),
+    h("div", { class: "split" }, card(null, wtbl, wnote), card(null, stbl, snote)),
+    card("存活曲線／死亡率", chartOpts, cmpEditor, survChart, cmpTbl),
+    card(null, tbl, miss),
+    card("磨耗等級分布", h("details", {}, h("summary", {}, "展開表格"), distTbl), distOpts, distChart));
+};
+
+// ===== 表面痕 =====
+RENDER.marks = (body) => {
+  const u = ui("marks");
+  const top = h("div", { class: "row" }, speciesSelect("marks", "Sus"));
+  const sp = u.sp; u.item ||= "切割"; u.chart ||= "cats"; u.hideZero ??= true;
+  top.append(segs(Core.MARK_ITEMS.map((x) => [x, x]), u.item, (v) => { u.item = v; markDirty(); renderTab(); }));
+  const map = (S.settings.markMap[u.item] ||= {});
+  const res = Core.marks(S.view, sp, u.item, map);
+  const known = Core.uniq(res.rawValues.map((x) => (x.原始寫法 in map ? map[x.原始寫法] : x.原始寫法)).filter(Boolean));
+  const dl = h("datalist", { id: "markCats" }, known.map((k) => h("option", { value: k })));
+  const mapTbl = makeTable([{ k: "原始寫法" }, { k: "筆數", f: "int" }, { k: "數量加總", f: "int" },
+    { k: "歸入", render: (r) => h("input", { type: "text", list: "markCats", value: r.原始寫法 in map ? map[r.原始寫法] : r.原始寫法, style: { width: "120px" }, onchange: (e) => {
+      const v = e.target.value.trim(); if (v === r.原始寫法) delete map[r.原始寫法]; else map[r.原始寫法] = v; markDirty(); renderTab(); } }),
+    text: (r) => (r.原始寫法 in map ? map[r.原始寫法] : r.原始寫法) }],
+  res.rawValues, { name: `${S.site}_${u.item}寫法_${sp}`, title: `${u.item}：原始寫法歸類`, maxHeight: "420px", rowClass: (r) => (r.原始寫法 in map ? "mod" : "") });
+  const cols = [{ k: "骨骼部位" }, ...res.cols.map((c) => ({ k: c, f: "int" })), { k: "有紀錄合計", f: "int" }, { k: "無紀錄", f: "int" }, { k: "總數", label: "總數(NISP)", f: "int" }, { k: "有紀錄百分比", f: "pct" }];
+  const tbl = makeTable(cols, res.table, { total: res.total, name: `${S.site}_${u.item}_${sp}`, title: `${sp} ${u.item}（數量加總）` });
+  const chartOpts = h("div", { class: "row small" }, "圖表內容 ", h("select", { onchange: (e) => { u.chart = e.target.value; markDirty(); renderTab(); } },
+    [["cats", "各類別數量"], ["catspct", "各類別佔該部位百分比"], ["pct", "有紀錄百分比"]].map(([v, l]) => h("option", { value: v, selected: u.chart === v }, l))),
+  h("label", {}, h("input", { type: "checkbox", checked: u.hideZero, onchange: (e) => { u.hideZero = e.target.checked; markDirty(); renderTab(); } }), " 不顯示沒有紀錄的部位"));
+  const ch = chartCard("marks_" + u.item, (type) => {
+    const t = u.hideZero ? res.table.filter((x) => x.有紀錄合計 > 0) : res.table;
+    if (u.chart === "pct") return { type, categories: t.map((x) => x.骨骼部位), series: [{ name: "有紀錄百分比", values: t.map((x) => x.有紀錄百分比) }], valueFormat: "pct" };
+    return { type, categories: t.map((x) => x.骨骼部位), valueFormat: u.chart === "cats" ? "int" : "pct",
+      series: res.cols.map((c) => ({ name: c, values: t.map((x) => (u.chart === "cats" ? x[c] : x.總數 ? x[c] / x.總數 : 0)) })) };
+  }, { types: ["bar", "hbar"], defaults: { title: `${sp} ${u.item}`, yLabel: "NISP", stacked: true } });
+  body.append(card(null, top, h("div", { class: "muted" }, "空白與「-」＝無紀錄；v／V 合併為 v。在左側「歸入」欄可把不同寫法歸成同一類（例如把 Br+B 歸入 Br）；清空＝視為無紀錄。")),
+    h("div", { class: "split" }, card(null, mapTbl, dl), card(null, tbl)), card("圖表", chartOpts, ch));
+};
+
+// ===== 臼齒測量 =====
+RENDER.molars = async (body) => {
+  const u = ui("molars");
+  const top = h("div", { class: "row" }, speciesSelect("molars", "Sus"));
+  const sp = u.sp; u.tooth ||= "M1"; u.jaw ||= "全部"; u.x ||= "GL"; u.y ||= "WA"; u.group ||= "上下顎";
+  body.append(card(null, top, h("div", { class: "muted" }, "讀取長表…")));
+  const longs = await longsFor(sp);
+  body.innerHTML = "";
+  const res = Core.molars(S.view, S.cfg, sp, longs);
+  const ex = S.settings.molarExclude;
+  const key = (r) => `${r.流水號}|${r.齒位}`;
+  const isUnsure = (r) => !(r.齒位 in Core.MOLAR_ITEMS) && /M/.test(r.齒位);
+  top.append(segs([["M1", "M1"], ["M2", "M2"], ["M3", "M3"], ["unsure", "齒位不確定"]], u.tooth, (v) => { u.tooth = v; markDirty(); renderTab(); }),
+    h("span", { class: "ctl" }, "上下顎 ", h("select", { onchange: (e) => { u.jaw = e.target.value; markDirty(); renderTab(); } }, ["全部", "下顎", "上顎", "不明"].map((v) => h("option", { selected: u.jaw === v }, v)))));
+  const items = u.tooth === "unsure" ? Core.ALL_MI : Core.MOLAR_ITEMS[u.tooth];
+  let rows = res.records.filter((r) => (u.tooth === "unsure" ? isUnsure(r) : r.齒位 === u.tooth) && items.some((i) => r[i] !== null && r[i] !== undefined));
+  rows = rows.filter((r) => u.jaw === "全部" || (r.上下顎 || "不明") === u.jaw);
+  const used = rows.filter((r) => !ex[key(r)]);
+  const tbl = makeTable([
+    { k: "排除", render: (r) => h("input", { type: "checkbox", checked: !!ex[key(r)], onchange: (e) => { if (e.target.checked) ex[key(r)] = true; else delete ex[key(r)]; markDirty(); renderTab(); } }), text: (r) => (ex[key(r)] ? "排除" : "") },
+    { k: "流水號" }, ...(u.tooth === "unsure" ? [{ k: "齒位" }] : []), { k: "上下顎" }, { k: "側別" }, ...items.map((k) => ({ k, f: "num" })), { k: "磨耗" }, { k: "來源" }, { k: "檢查" }, { k: "坑號" }, { k: "層位" }, { k: "文化層" }, { k: "原表列號" }],
+  rows, { name: `${S.site}_${sp}_${u.tooth}`, title: `${sp} ${u.tooth === "unsure" ? "齒位不確定" : u.tooth}（${used.length}/${rows.length} 顆採用）`,
+    rowClass: (r) => [ex[key(r)] ? "off" : "", r._outlier ? "warn" : ""].join(" ") });
+  // 描述統計（不含排除）
+  const stats = [];
+  for (const jaw of ["下顎", "上顎", ""]) for (const it of items) {
+    const d = Core.describe(used.filter((r) => r.上下顎 === jaw).map((r) => r[it]));
+    if (d) stats.push({ 上下顎: jaw || "不明", 項目: it, ...d });
+  }
+  const statTbl = makeTable([{ k: "上下顎" }, { k: "項目" }, { k: "n", f: "int" }, { k: "平均", f: "num" }, { k: "標準差", f: "num" }, { k: "最小", f: "num" }, { k: "最大", f: "num" }], stats, { name: `${S.site}_${sp}_${u.tooth}_統計`, title: "描述統計（不含排除者）" });
+  const groupOf = (r) => (u.group === "不分組" ? "全部" : String(r[u.group] || "（空白）"));
+  const chartOpts = h("div", { class: "row small" },
+    "X ", h("select", { onchange: (e) => { u.x = e.target.value; markDirty(); renderTab(); } }, items.map((v) => h("option", { selected: u.x === v }, v))),
+    "Y ", h("select", { onchange: (e) => { u.y = e.target.value; markDirty(); renderTab(); } }, items.map((v) => h("option", { selected: u.y === v }, v))),
+    "分組 ", h("select", { onchange: (e) => { u.group = e.target.value; markDirty(); renderTab(); } }, ["上下顎", "文化層", "磨耗", "來源", "不分組"].map((v) => h("option", { selected: u.group === v }, v))),
+    h("span", { class: "muted" }, "（直方圖使用 X 項目）"));
+  const ch = chartCard("molars", (type) => {
+    const gs = Core.groupBy(used, groupOf);
+    const lab = { title: `${sp} ${u.tooth === "unsure" ? "齒位不確定" : u.tooth}`, xLabel: `${u.x} (mm)`, yLabel: type === "hist" ? "件數" : `${u.y} (mm)` };
+    if (type === "hist") return { ...lab, type, series: [...gs].map(([g, rs]) => ({ name: g, values: rs.map((r) => r[u.x]).filter((v) => v !== null && v !== undefined) })) };
+    return { ...lab, type: "scatter", series: [...gs].map(([g, rs]) => ({ name: g, points: rs.filter((r) => r[u.x] != null && r[u.y] != null).map((r) => ({ x: r[u.x], y: r[u.y], label: r.流水號 })) })) };
+  }, { types: ["scatter", "hist"], defaults: { fillOpacity: 0.6, strokeWidth: 1, legend: "right" } });
+  const other = res.other.length ? h("details", {}, h("summary", {}, `其他測量代號（L、B、MWA…，未自動對應；${res.other.length}）`),
+    makeTable([{ k: "流水號" }, { k: "骨骼" }, { k: "上下顎" }, { k: "側別" }, { k: "齒位" }, { k: "測量" }, { k: "磨耗" }, { k: "來源" }], res.other, { name: `${S.site}_${sp}_其他測量代號`, maxHeight: "260px" })) : null;
+  body.append(card(null, top, h("div", { class: "muted" }, "主要來源為原表兩組「齒位、GL、WA、WP、WM、stage」欄，長表只補缺。橘色＝疑似離群（偏離中位數 25% 以上）；勾「排除」後不進入統計與圖表（儲存設定後保留）。")),
+    h("div", { class: "split" }, card(null, tbl, other), card(null, statTbl)), card("圖表", chartOpts, ch));
+};
+
+// ===== 說明 =====
+RENDER.help = (body) => {
+  body.append(card("使用說明", h("div", { class: "helptext", html: `
+<ol>
+<li>按「選擇『獸骨資料整理』資料夾」，瀏覽器詢問權限時選「允許編輯」，設定與圖檔才能直接存回資料夾。</li>
+<li>選遺址與清單後按「載入」。左側「資料篩選」可依文化層等欄位排除部分紀錄，所有分頁會立即重算。</li>
+<li>各分頁的調整（物種合併與順序、MNI 採計部位、表面痕寫法歸類、性別判定修改、臼齒排除、圖表樣式）按左下「儲存設定到『分析結果』」後才會保存。</li>
+<li>年齡分頁依 Lemoine et al. (2014) 把每列（流水號＋上下顎）判定為 Specific（1–10）、Simplified-A（A–G）、Simplified-B（I–IV）年齡組，並畫存活曲線；磨耗寫法先在左側對照表轉成分數。</li>
+<li>圖表右側可改顏色、填滿圖樣（斜線、點點、交叉…）與點形狀；「黑白印刷樣式」一鍵改成黑灰色＋不同圖樣。</li>
+<li>表格可「複製表格」直接貼到試算表，或「匯出 CSV」；圖表可「匯出圖檔」，PNG 可設定公分＋DPI（會寫入 DPI 資訊，置入 Word 時尺寸正確）或像素＋倍率，也可存 SVG 向量檔。</li>
+</ol>
+<h3>設定檔（存在 遺址/分析結果/）</h3>
+<ul>
+<li><b>欄位對照.csv</b>：清單欄名 → 標準欄位（例如 Qty → 數量）。</li>
+<li><b>物種對照表.csv</b>：合併名稱、排序、納入動物相。</li>
+<li><b>MNI部位設定.csv</b>：各物種與預設不同的 MNI 採計部位（納入 Y/N）。</li>
+<li><b>表面痕歸類.csv</b>：表面痕原始寫法 → 歸入類別。</li>
+<li><b>磨耗對照.csv</b>：磨耗原始寫法 → Lemoine 分數。</li>
+<li><b>網頁工具設定.json</b>：篩選、性別修改、臼齒排除、圖表樣式等。</li>
+</ul>
+<p class="muted">共用設定（所有遺址）：程式/設定/骨骼分類.csv（骨骼別名、區域、順序、預設 MNI 採計）、物種別名.csv（中文名、反芻類）、側別對照.csv。沒有這些檔案時使用內建預設。平板或唯讀模式下，設定存在這台裝置的瀏覽器中，可另外下載備份。</p>
+<p class="muted">版本 ${APP_VERSION}。所有計算都在這台裝置的瀏覽器中進行，資料不會上傳。</p>
+<p class="muted">骨骼名稱別名、骨骼區域與順序、預設 MNI 採計部位在 程式/設定/骨骼分類.csv；中文物種名與反芻類在 程式/設定/物種別名.csv。計算規則與 程式/zooarch/*.py 相同。</p>` })));
+};
+
+// 測試介面
+window.ZA = { S, Core, Charts, MemFS, openRoot, loadSite, renderTab };
+
+</script>
+</body>
+</html>
